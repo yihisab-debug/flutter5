@@ -8,21 +8,18 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Регистрация
   Future<UserCredential> register(
     String email, String password) async {
     return await _auth.createUserWithEmailAndPassword(
       email: email, password: password);
   }
 
-  // Вход по email
   Future<UserCredential> login(
     String email, String password) async {
     return await _auth.signInWithEmailAndPassword(
       email: email, password: password);
   }
 
-  // Вход через Google
   Future<UserCredential?> signInWithGoogle() async {
     final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) return null;
@@ -34,12 +31,10 @@ class AuthService {
     return await _auth.signInWithCredential(credential);
   }
 
-  // Восстановление пароля
   Future<void> resetPassword(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
-  // Выход
   Future<void> logout() async {
     await _auth.signOut();
     await _googleSignIn.signOut();

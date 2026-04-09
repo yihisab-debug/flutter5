@@ -60,7 +60,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         foregroundColor: Colors.white,
       ),
       body: Column(children: [
-        // Форма отзыва
+
         Card(
           margin: const EdgeInsets.all(12),
           child: Padding(
@@ -68,10 +68,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
                 const Text('Оставить отзыв',
                   style: TextStyle(fontSize: 16,
                     fontWeight: FontWeight.bold)),
+
                 const SizedBox(height: 8),
+
                 RatingBar.builder(
                   initialRating: _myRating,
                   minRating: 1, maxRating: 5,
@@ -79,7 +82,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                     Icons.star, color: Colors.amber),
                   onRatingUpdate: (r) => setState(() => _myRating = r),
                 ),
+
                 const SizedBox(height: 8),
+
                 TextField(
                   controller: _commentCtrl,
                   maxLines: 3,
@@ -87,7 +92,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                     hintText: 'Ваш комментарий...',
                     border: OutlineInputBorder()),
                 ),
+
                 const SizedBox(height: 8),
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: ElevatedButton(
@@ -98,11 +105,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                       : const Text('Отправить'),
                   ),
                 ),
+
               ],
             ),
           ),
         ),
-        // Список отзывов
+
         Expanded(
           child: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -113,21 +121,29 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   itemBuilder: (_, i) {
                     final r = _reviews[i];
                     return Card(
+                      
                       margin: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 4),
                       child: ListTile(
+
                         leading: CircleAvatar(
                           child: Text(r.rating.toStringAsFixed(0))),
+
                         title: Text(r.comment),
+
                         subtitle: Row(children: [
+
                           RatingBarIndicator(
                             rating: r.rating,
                             itemSize: 14,
                             itemBuilder: (_, __) => const Icon(
                               Icons.star, color: Colors.amber)),
+
                           const SizedBox(width: 8),
+
                           Text(r.createdAt.split('T').first,
                             style: const TextStyle(fontSize: 11)),
+
                         ]),
                       ),
                     );

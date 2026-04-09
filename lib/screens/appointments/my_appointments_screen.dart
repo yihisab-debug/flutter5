@@ -69,21 +69,26 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
         final a = list[i];
         return Card(
           child: ListTile(
+
             leading: CircleAvatar(
               backgroundColor: canCancel ? Colors.blue : Colors.grey,
               child: Icon(
                 canCancel ? Icons.event_available : Icons.event_busy,
                 color: Colors.white),
             ),
+
             title: Text('Врач ID: ${a.doctorId}',
               style: const TextStyle(fontWeight: FontWeight.bold)),
+
             subtitle: Text('Слот: ${a.slotId}\nСтатус: ${a.status}'),
+
             isThreeLine: true,
             trailing: canCancel ? TextButton(
               onPressed: () => _cancel(ctx, a),
               child: const Text('Отмена',
                 style: TextStyle(color: Colors.red)),
             ) : null,
+
           ),
         );
       },
@@ -97,13 +102,19 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
         title: const Text('Отмена записи'),
         content: const Text('Вы уверены, что хотите отменить запись?'),
         actions: [
+
           TextButton(onPressed: () => Navigator.pop(dCtx, false),
+
             child: const Text('Нет')),
+
           TextButton(onPressed: () => Navigator.pop(dCtx, true),
+
             child: const Text('Да', style: TextStyle(color: Colors.red))),
+
         ],
       ),
     );
+    
     if (confirm == true && ctx.mounted) {
       await ctx.read<AppointmentProvider>()
         .cancelAppointment(a.id, a.slotId);

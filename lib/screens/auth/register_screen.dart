@@ -42,6 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+
               TextFormField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
@@ -52,7 +53,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validator: (v) => v!.contains('@')
                   ? null : 'Некорректный email',
               ),
+
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _passCtrl,
                 obscureText: true,
@@ -63,7 +66,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validator: (v) => v!.length >= 6
                   ? null : 'Минимум 6 символов',
               ),
+
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _confirmCtrl,
                 obscureText: true,
@@ -74,7 +79,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validator: (v) => v == _passCtrl.text
                   ? null : 'Пароли не совпадают',
               ),
+
               const SizedBox(height: 24),
+
               ElevatedButton(
                 onPressed: _loading ? null : _register,
                 style: ElevatedButton.styleFrom(
@@ -85,6 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   : const Text('Зарегистрироваться',
                       style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
+              
             ],
           ),
         ),

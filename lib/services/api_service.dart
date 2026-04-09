@@ -5,8 +5,7 @@ import '../models/appointment.dart';
 import '../models/review.dart';
 
 class ApiService {
-  // /project = doctors (с полями slots внутри схемы)
-  // /image = appointments + reviews (объединены)
+
   static const String projectUrl = 'https://6939834cc8d59937aa082275.mockapi.io/project';
   static const String imageUrl = 'https://6939834cc8d59937aa082275.mockapi.io/image';
 
@@ -15,13 +14,11 @@ class ApiService {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  // ---- DOCTORS ----
   Future<List<Doctor>> getDoctors() async {
     final res = await _dio.get(projectUrl);
     return (res.data as List).map((j) => Doctor.fromJson(j)).toList();
   }
 
-  // ---- SLOTS (из того же /project, фильтр по doctorId) ----
   Future<List<Slot>> getSlots(String doctorId) async {
     final res = await _dio.get(projectUrl,
         queryParameters: {'doctorId': doctorId});
@@ -32,7 +29,6 @@ class ApiService {
     await _dio.put('$projectUrl/$id', data: {'isBooked': isBooked});
   }
 
-  // ---- APPOINTMENTS (из /image, фильтр по userId) ----
   Future<List<Appointment>> getAppointments(String userId) async {
     final res = await _dio.get(imageUrl,
         queryParameters: {'userId': userId});
@@ -48,7 +44,6 @@ class ApiService {
     await _dio.put('$imageUrl/$id', data: data);
   }
 
-  // ---- REVIEWS (из /image, фильтр по doctorId) ----
   Future<List<Review>> getReviews(String doctorId) async {
     final res = await _dio.get(imageUrl,
         queryParameters: {'doctorId': doctorId});

@@ -15,23 +15,20 @@ class NotificationService {
     );
 
   Future<void> init() async {
-    // Запрос разрешений
+
     await _fcm.requestPermission(
       alert: true, badge: true, sound: true);
 
-    // Инициализация локальных уведомлений
     const androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
     await _local.initialize(
       const InitializationSettings(android: androidSettings));
 
-    // Создание канала уведомлений (Android 8+)
     await _local
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(_channel);
 
-    // Обработка FCM когда приложение открыто
     FirebaseMessaging.onMessage.listen((message) {
       final notification = message.notification;
       if (notification != null) {
@@ -52,7 +49,6 @@ class NotificationService {
     });
   }
 
-  // Показать уведомление о созданной записи
   Future<void> showBookingConfirmation({
     required String doctorName,
     required String date,

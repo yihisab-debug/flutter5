@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _auth.login(_emailCtrl.text.trim(),
         _passCtrl.text.trim());
-      // StreamBuilder в main.dart автоматически перейдёт
+
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка: ${e.toString()}'),
@@ -54,15 +54,21 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+
                 const SizedBox(height: 60),
+
                 const Icon(Icons.medical_services,
                   size: 80, color: Colors.blue),
+
                 const SizedBox(height: 16),
+
                 const Text('Online Doctor Booking',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24,
                     fontWeight: FontWeight.bold)),
+
                 const SizedBox(height: 40),
+
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -73,7 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: (v) => v!.contains('@')
                     ? null : 'Введите корректный email',
                 ),
+
                 const SizedBox(height: 16),
+
                 TextFormField(
                   controller: _passCtrl,
                   obscureText: _obscure,
@@ -90,13 +98,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: (v) => v!.length >= 6
                     ? null : 'Минимум 6 символов',
                 ),
+
                 const SizedBox(height: 8),
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: _resetPassword,
                     child: const Text('Забыли пароль?'))),
+
                 const SizedBox(height: 16),
+
                 ElevatedButton(
                   onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
@@ -109,13 +121,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(fontSize: 16,
                           color: Colors.white)),
                 ),
+
                 const SizedBox(height: 16),
+
                 TextButton(
                   onPressed: () => Navigator.push(context,
                     MaterialPageRoute(
                       builder: (_) => const RegisterScreen())),
                   child: const Text('Нет аккаунта? Зарегистрируйтесь'),
                 ),
+                
               ],
             ),
           ),
