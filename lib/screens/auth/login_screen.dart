@@ -20,12 +20,27 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await _auth.login(_emailCtrl.text.trim(),
-        _passCtrl.text.trim());
-
+      await _auth.login(_emailCtrl.text.trim(), _passCtrl.text.trim());
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка: ${e.toString()}'),
+          backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _loading = true);
+    try {
+      final result = await _auth.signInWithGoogle();
+      if (result == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Вход через Google отменён')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка Google: ${e.toString()}'),
           backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -109,17 +124,46 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
+                // Кнопка входа по email
                 ElevatedButton(
                   onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(16),
                     backgroundColor: Colors.blue),
                   child: _loading
-                    ? const CircularProgressIndicator(
-                        color: Colors.white)
+                    ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Войти',
-                        style: TextStyle(fontSize: 16,
-                          color: Colors.white)),
+                        style: TextStyle(fontSize: 16, color: Colors.white)),
+                ),
+
+                const SizedBox(height: 12),
+
+                const Row(children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('или', style: TextStyle(color: Colors.grey)),
+                  ),
+                  Expanded(child: Divider()),
+                ]),
+
+                const SizedBox(height: 12),
+
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _loginWithGoogle,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.all(14),
+                    side: const BorderSide(color: Colors.grey),
+                  ),
+                  
+                  icon: Image.network(
+                    'https://www.google.com/favicon.ico',
+                    width: 20, height: 20,
+                    errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.g_mobiledata, size: 24),
+                  ),
+                  label: const Text('Войти через Google',
+                    style: TextStyle(fontSize: 16, color: Colors.black87)),
                 ),
 
                 const SizedBox(height: 16),
@@ -130,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       builder: (_) => const RegisterScreen())),
                   child: const Text('Нет аккаунта? Зарегистрируйтесь'),
                 ),
-                
+
               ],
             ),
           ),
