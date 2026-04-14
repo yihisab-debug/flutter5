@@ -16,7 +16,7 @@ class BookingScreen extends StatefulWidget {
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  final _api = ApiService();
+  final _api           = ApiService();
   final _notifications = NotificationService();
   bool _loading = false;
 
@@ -26,38 +26,49 @@ class _BookingScreenState extends State<BookingScreen> {
       final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
       await _api.createAppointment({
-        'userId': userId,
-        'doctorId': widget.doctor.id,
-        'slotId': widget.slot.id,
-        'status': 'confirmed',
-        'createdAt': DateTime.now().toIso8601String(),
+        'userId':     userId,
+        'doctorId':   widget.doctor.id,
+        'doctorName': widget.doctor.name,        
+        'doctorSpec': widget.doctor.specialization, 
+        'slotId':     widget.slot.id,
+        'date':       widget.slot.date,            
+        'startTime':  widget.slot.startTime,      
+        'endTime':    widget.slot.endTime,        
+        'status':     'confirmed',
+        'createdAt':  DateTime.now().toIso8601String(),
       });
 
       await _api.updateSlot(widget.slot.id, true);
 
       await _notifications.showBookingConfirmation(
         doctorName: widget.doctor.name,
-        date: widget.slot.date,
-        time: widget.slot.startTime,
+        date:       widget.slot.date,
+        time:       widget.slot.startTime,
       );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-
           const SnackBar(
             content: Text('Запись успешно создана!'),
-            backgroundColor: Colors.green));
+            backgroundColor: Colors.green,
+          ),
+        );
 
-        Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(
-            builder: (_) => const MyAppointmentsScreen()),
-          (route) => route.isFirst);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MyAppointmentsScreen()),
+          (route) => route.isFirst,
+        );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-
-        SnackBar(content: Text('Ошибка: ${e.toString()}'),
-          backgroundColor: Colors.red));
-
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -65,6 +76,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final slot   = widget.slot;
+    final doctor = widget.doctor;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Оформление записи'),
@@ -85,20 +99,36 @@ class _BookingScreenState extends State<BookingScreen> {
                   children: [
 
                     const Text('Детали записи',
-                      style: TextStyle(fontSize: 18,
-                        fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
 
                     const Divider(),
 
-                    _infoRow(Icons.person, 'Врач', widget.doctor.name),
-                    _infoRow(Icons.medical_services, 'Специализация',
-                      widget.doctor.specialization),
-                    _infoRow(Icons.calendar_today, 'Дата',
-                      widget.slot.date),
-                    _infoRow(Icons.access_time, 'Время',
-                      '${widget.slot.startTime}–${widget.slot.endTime}'),
-                    _infoRow(Icons.payments, 'Стоимость',
-                      '${widget.doctor.price} ₸'),
+                    _infoRow(Icons.person,
+                      'Врач', doctor.name),
+
+                    _infoRow(Icons.medical_services,
+                      'Специализация', doctor.specialization),
+
+                    _infoRow(Icons.calendar_today,
+                      'Дата', slot.date),
+
+                    _infoRow(Icons.access_time,
+                      'Время', '${slot.startTime}–${slot.endTime}'),
+
+                    _infoRow(Icons.payments,
+                      'Стоимость', '${doctor.price} ₸'),
+
+                    _infoRow(
+                      slot.isBooked
+                        ? Icons.event_busy
+                        : Icons.event_available,
+                      'Статус слота',
+                      slot.statusLabel,
+                      valueColor: slot.isBooked
+                        ? Colors.red
+                        : Colors.green,
+                    ),
 
                   ],
                 ),
@@ -111,11 +141,14 @@ class _BookingScreenState extends State<BookingScreen> {
               onPressed: _loading ? null : _confirm,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(16),
-                backgroundColor: Colors.blue),
+                backgroundColor: Colors.blue,
+              ),
               child: _loading
                 ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Подтвердить запись',
-                    style: TextStyle(fontSize: 16, color: Colors.white)),
+                : const Text(
+                    'Подтвердить запись',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
             ),
 
           ],
@@ -124,22 +157,31 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value) {
+  Widget _infoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
 
-        Icon(icon, size: 18, color: Colors.blue),
+          Icon(icon, size: 18, color: Colors.blue),
 
-        const SizedBox(width: 8),
+          const SizedBox(width: 8),
 
-        Text('$label: ', style: const TextStyle(
-          fontWeight: FontWeight.w600)),
+          Text('$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w600)),
 
-        Expanded(child: Text(value)),
-        
-      ]),
+          Expanded(
+            child: Text(value,
+              style: TextStyle(color: valueColor)),
+          ),
+          
+        ],
+      ),
     );
   }
 }

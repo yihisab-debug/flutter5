@@ -9,22 +9,30 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-  final _auth = AuthService();
-  bool _loading = false;
-  bool _obscure = true;
+  final _formKey    = GlobalKey<FormState>();
+  final _emailCtrl  = TextEditingController();
+  final _passCtrl   = TextEditingController();
+  final _auth       = AuthService();
+  bool _loading     = false;
+  bool _obscure     = true;
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await _auth.login(_emailCtrl.text.trim(), _passCtrl.text.trim());
+      await _auth.login(
+        _emailCtrl.text.trim(),
+        _passCtrl.text.trim(),
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: ${e.toString()}'),
-          backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка входа: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -36,51 +44,96 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await _auth.signInWithGoogle();
       if (result == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Вход через Google отменён')));
+          const SnackBar(content: Text('Вход через Google отменён')),
+        );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка Google: ${e.toString()}'),
-          backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка Google: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _resetPassword() async {
-    if (_emailCtrl.text.isEmpty) {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите email')));
+        const SnackBar(
+          content: Text('Введите корректный email для сброса пароля')),
+      );
       return;
     }
-    await _auth.resetPassword(_emailCtrl.text.trim());
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Письмо отправлено!')));
+    try {
+      await _auth.resetPassword(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Письмо для сброса пароля отправлено'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
 
-                const SizedBox(height: 60),
-
-                const Icon(Icons.medical_services,
-                  size: 80, color: Colors.blue),
+                const Icon(Icons.local_hospital,
+                  size: 72, color: Colors.blue),
 
                 const SizedBox(height: 16),
 
-                const Text('Online Doctor Booking',
+                const Text(
+                  'Online Doctor Booking',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24,
-                    fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                const Text(
+                  'Войдите в свой аккаунт',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
 
                 const SizedBox(height: 40),
 
@@ -90,9 +143,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder()),
-                  validator: (v) => v!.contains('@')
-                    ? null : 'Введите корректный email',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) => (v != null && v.contains('@'))
+                      ? null
+                      : 'Некорректный email',
                 ),
 
                 const SizedBox(height: 16),
@@ -103,76 +158,97 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Пароль',
                     prefixIcon: const Icon(Icons.lock),
+                    border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure
-                        ? Icons.visibility
-                        : Icons.visibility_off),
+                      icon: Icon(
+                        _obscure
+                          ? Icons.visibility_off
+                          : Icons.visibility),
                       onPressed: () =>
-                        setState(() => _obscure = !_obscure)),
-                    border: const OutlineInputBorder()),
-                  validator: (v) => v!.length >= 6
-                    ? null : 'Минимум 6 символов',
+                          setState(() => _obscure = !_obscure),
+                    ),
+                  ),
+                  validator: (v) => (v != null && v.length >= 6)
+                      ? null
+                      : 'Минимум 6 символов',
                 ),
-
-                const SizedBox(height: 8),
 
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _resetPassword,
-                    child: const Text('Забыли пароль?'))),
+                    onPressed: _loading ? null : _resetPassword,
+                    child: const Text('Забыли пароль?'),
+                  ),
+                ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
 
-                // Кнопка входа по email
                 ElevatedButton(
                   onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.all(16),
-                    backgroundColor: Colors.blue),
+                    backgroundColor: Colors.blue,
+                  ),
                   child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Войти',
-                        style: TextStyle(fontSize: 16, color: Colors.white)),
-                ),
-
-                const SizedBox(height: 12),
-
-                const Row(children: [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('или', style: TextStyle(color: Colors.grey)),
-                  ),
-                  Expanded(child: Divider()),
-                ]),
-
-                const SizedBox(height: 12),
-
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : _loginWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(14),
-                    side: const BorderSide(color: Colors.grey),
-                  ),
-                  
-                  icon: Image.network(
-                    'https://www.google.com/favicon.ico',
-                    width: 20, height: 20,
-                    errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.g_mobiledata, size: 24),
-                  ),
-                  label: const Text('Войти через Google',
-                    style: TextStyle(fontSize: 16, color: Colors.black87)),
+                      ? const SizedBox(
+                          height: 20, width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                      : const Text(
+                          'Войти',
+                          style: TextStyle(
+                            fontSize: 16, color: Colors.white)),
                 ),
 
                 const SizedBox(height: 16),
 
-                TextButton(
-                  onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(
-                      builder: (_) => const RegisterScreen())),
-                  child: const Text('Нет аккаунта? Зарегистрируйтесь'),
+                Row(children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('или',
+                      style: TextStyle(color: Colors.grey.shade500)),
+                  ),
+                  const Expanded(child: Divider()),
+                ]),
+
+                const SizedBox(height: 16),
+
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _loginWithGoogle,
+                  icon: Image.network(
+                    'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png',
+                    height: 20,
+                    errorBuilder: (_, __, ___) =>
+                        const Icon(Icons.g_mobiledata, size: 22),
+                  ),
+                  label: const Text('Войти через Google'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.all(14),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+
+                    const Text('Нет аккаунта? '),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen())),
+                      child: const Text(
+                        'Зарегистрироваться',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    
+                  ],
                 ),
 
               ],
