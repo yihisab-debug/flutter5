@@ -2,14 +2,13 @@ class Appointment {
   final String id;
   final String userId;
   final String doctorId;
-  final String doctorName;       
-  final String doctorSpec;      
+  final String doctorName;
+  final String doctorSpec;
   final String slotId;
-  final String date;            
-  final String startTime;   
+  final String date;
+  final String startTime;
   final String endTime;
   String status;
-
   final String createdAt;
 
   Appointment({
@@ -30,10 +29,10 @@ class Appointment {
     return Appointment(
       id:         json['id'].toString(),
       userId:     json['userId'] ?? '',
-      doctorId:   json['doctorId'].toString(),
+      doctorId:   json['doctorId']?.toString() ?? '',
       doctorName: json['doctorName'] ?? '',
       doctorSpec: json['doctorSpec'] ?? '',
-      slotId:     json['slotId'].toString(),
+      slotId:     json['slotId']?.toString() ?? '',
       date:       json['date'] ?? '',
       startTime:  json['startTime'] ?? '',
       endTime:    json['endTime'] ?? '',

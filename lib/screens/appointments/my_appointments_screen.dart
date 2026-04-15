@@ -6,6 +6,7 @@ import '../../models/appointment.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
+
   @override
   State<MyAppointmentsScreen> createState() => _MyAppointmentsScreenState();
 }
@@ -19,9 +20,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    Future.microtask(
-      () => context.read<AppointmentProvider>().loadAppointments(uid),
-    );
+    Future.microtask(() {
+      context.read<AppointmentProvider>().loadAppointments(uid);
+    });
   }
 
   @override
@@ -95,17 +96,14 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(dCtx, true),
-            child: const Text('Да',
-              style: TextStyle(color: Colors.red)),
+            child: const Text('Да', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (confirm == true && ctx.mounted) {
-      await ctx
-          .read<AppointmentProvider>()
-          .cancelAppointment(a.id, a.slotId);
+      await ctx.read<AppointmentProvider>().cancelAppointment(a.id, a.slotId);
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(content: Text('Запись отменена')),
@@ -168,14 +166,19 @@ class _AppointmentCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(doctorDisplay,
+                  Text(
+                    doctorDisplay,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                   if (a.doctorSpec.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(a.doctorSpec,
-                      style: const TextStyle(
-                        color: Colors.blue, fontSize: 13)),
+                    Text(
+                      a.doctorSpec,
+                      style: const TextStyle(color: Colors.blue, fontSize: 13),
+                    ),
                   ],
                   const SizedBox(height: 6),
                   _row(Icons.calendar_today, 'Дата', dateDisplay),
@@ -193,7 +196,7 @@ class _AppointmentCard extends StatelessWidget {
               TextButton(
                 onPressed: onCancel,
                 child: const Text('Отмена',
-                  style: TextStyle(color: Colors.red)),
+                    style: TextStyle(color: Colors.red)),
               ),
           ],
         ),
@@ -201,8 +204,7 @@ class _AppointmentCard extends StatelessWidget {
     );
   }
 
-  Widget _row(IconData icon, String label, String value,
-      {Color? valueColor}) {
+  Widget _row(IconData icon, String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: Row(
@@ -210,11 +212,12 @@ class _AppointmentCard extends StatelessWidget {
           Icon(icon, size: 14, color: Colors.grey),
           const SizedBox(width: 4),
           Text('$label: ',
-            style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              style: const TextStyle(fontSize: 13, color: Colors.grey)),
           Expanded(
-            child: Text(value,
-              style: TextStyle(
-                fontSize: 13, color: valueColor ?? Colors.black87)),
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 13, color: valueColor ?? Colors.black87),
+            ),
           ),
         ],
       ),
