@@ -38,7 +38,6 @@ class _BookingScreenState extends State<BookingScreen> {
         'createdAt':  DateTime.now().toIso8601String(),
       });
 
-      await _api.updateSlot(widget.slot.id, true);
 
       await _notifications.showBookingConfirmation(
         doctorName: widget.doctor.name,

@@ -7,8 +7,7 @@ import '../../models/appointment.dart';
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
   @override
-  State<MyAppointmentsScreen> createState() =>
-      _MyAppointmentsScreenState();
+  State<MyAppointmentsScreen> createState() => _MyAppointmentsScreenState();
 }
 
 class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
@@ -56,7 +55,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildList(provider.upcoming,  canCancel: true),
+              _buildList(provider.upcoming, canCancel: true),
               _buildList(provider.cancelled, canCancel: false),
             ],
           );
@@ -90,18 +89,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
         title: const Text('Отмена записи'),
         content: const Text('Вы уверены, что хотите отменить запись?'),
         actions: [
-
           TextButton(
             onPressed: () => Navigator.pop(dCtx, false),
             child: const Text('Нет'),
           ),
-
           TextButton(
             onPressed: () => Navigator.pop(dCtx, true),
             child: const Text('Да',
               style: TextStyle(color: Colors.red)),
           ),
-
         ],
       ),
     );
@@ -138,8 +134,20 @@ class _AppointmentCard extends StatelessWidget {
         ? a.doctorName
         : 'Врач ID: ${a.doctorId}';
 
-    final hasDate = a.date.isNotEmpty;
-    final hasTime = a.startTime.isNotEmpty;
+    String dateDisplay = a.date;
+    if (dateDisplay.isEmpty && a.createdAt.isNotEmpty) {
+      dateDisplay = a.createdAt.split('T').first;
+    }
+    if (dateDisplay.isEmpty) dateDisplay = 'Не указана';
+
+    String timeDisplay;
+    if (a.startTime.isNotEmpty) {
+      timeDisplay = a.endTime.isNotEmpty
+          ? '${a.startTime} – ${a.endTime}'
+          : a.startTime;
+    } else {
+      timeDisplay = 'Не указано';
+    }
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -148,7 +156,6 @@ class _AppointmentCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             CircleAvatar(
               backgroundColor: canCancel ? Colors.blue : Colors.grey,
               child: Icon(
@@ -156,59 +163,38 @@ class _AppointmentCard extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-
             const SizedBox(width: 12),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   Text(doctorDisplay,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 15)),
-
                   if (a.doctorSpec.isNotEmpty) ...[
-
                     const SizedBox(height: 2),
-
                     Text(a.doctorSpec,
                       style: const TextStyle(
                         color: Colors.blue, fontSize: 13)),
                   ],
-
                   const SizedBox(height: 6),
-
-                  if (hasDate)
-
-                    _row(Icons.calendar_today, 'Дата', a.date),
-
-                  if (hasTime)
-
-                    _row(Icons.access_time, 'Время',
-                      a.endTime.isNotEmpty
-                        ? '${a.startTime} – ${a.endTime}'
-                        : a.startTime),
-
+                  _row(Icons.calendar_today, 'Дата', dateDisplay),
+                  _row(Icons.access_time, 'Время', timeDisplay),
                   _row(
                     canCancel ? Icons.check_circle : Icons.cancel,
                     'Статус',
                     canCancel ? 'Подтверждено' : 'Отменено',
                     valueColor: canCancel ? Colors.green : Colors.red,
                   ),
-
                 ],
               ),
             ),
-
             if (canCancel)
-
               TextButton(
                 onPressed: onCancel,
                 child: const Text('Отмена',
                   style: TextStyle(color: Colors.red)),
               ),
-
           ],
         ),
       ),
@@ -221,20 +207,15 @@ class _AppointmentCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 3),
       child: Row(
         children: [
-
           Icon(icon, size: 14, color: Colors.grey),
-
           const SizedBox(width: 4),
-
           Text('$label: ',
             style: const TextStyle(fontSize: 13, color: Colors.grey)),
-
           Expanded(
             child: Text(value,
               style: TextStyle(
                 fontSize: 13, color: valueColor ?? Colors.black87)),
           ),
-          
         ],
       ),
     );

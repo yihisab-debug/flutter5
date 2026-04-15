@@ -3,7 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../models/doctor.dart';
 import '../../models/slot.dart';
-import '../../services/api_service.dart';
 import '../booking/booking_screen.dart';
 import '../reviews/reviews_screen.dart';
 
@@ -11,32 +10,45 @@ class DoctorProfileScreen extends StatefulWidget {
   final Doctor doctor;
   const DoctorProfileScreen({super.key, required this.doctor});
   @override
-  State<DoctorProfileScreen> createState() =>
-      _DoctorProfileScreenState();
+  State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
 }
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
-  final _api = ApiService();
   List<Slot> _slots = [];
-  bool _loading = true;
   String? _selectedDate;
+
+  // Генерируем слоты локально: 7 дней вперёд, каждый час с 09:00 до 17:00
+  List<Slot> _generateSlots(String doctorId) {
+    final slots = <Slot>[];
+    final today = DateTime.now();
+    int idCounter = 1;
+
+    for (int day = 1; day <= 7; day++) {
+      final date = today.add(Duration(days: day));
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      for (int hour = 9; hour < 17; hour++) {
+        final start = '${hour.toString().padLeft(2, '0')}:00';
+        final end = '${(hour + 1).toString().padLeft(2, '0')}:00';
+        slots.add(Slot(
+          id: '${doctorId}_${idCounter++}',
+          doctorId: doctorId,
+          date: dateStr,
+          startTime: start,
+          endTime: end,
+          isBooked: false,
+          status: 'available',
+        ));
+      }
+    }
+    return slots;
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadSlots();
-  }
-
-  Future<void> _loadSlots() async {
-    try {
-      final slots = await _api.getSlots(widget.doctor.id);
-      setState(() {
-        _slots  = slots;
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
-    }
+    _slots = _generateSlots(widget.doctor.id);
   }
 
   List<String> get _availableDates {
@@ -55,16 +67,35 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         .toList();
   }
 
+  void _markSlotBooked(String slotId) {
+    setState(() {
+      final idx = _slots.indexWhere((s) => s.id == slotId);
+      if (idx != -1) {
+        final old = _slots[idx];
+        _slots[idx] = Slot(
+          id: old.id,
+          doctorId: old.doctorId,
+          date: old.date,
+          startTime: old.startTime,
+          endTime: old.endTime,
+          isBooked: true,
+          status: 'booked',
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final doctor = widget.doctor;
+    final rating = doctor.rating.clamp(0.0, 5.0);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(doctor.name),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
-
           IconButton(
             icon: const Icon(Icons.reviews),
             tooltip: 'Отзывы',
@@ -72,63 +103,48 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               MaterialPageRoute(
                 builder: (_) => ReviewsScreen(doctor: doctor))),
           ),
-
         ],
       ),
-
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Container(
               width: double.infinity,
               color: Colors.blue.shade50,
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-
                   CachedNetworkImage(
                     imageUrl: doctor.photoUrl,
                     imageBuilder: (ctx, img) => CircleAvatar(
                       backgroundImage: img, radius: 55),
-
                     placeholder: (_, __) => const CircleAvatar(
                       radius: 55,
                       child: CircularProgressIndicator()),
-
                     errorWidget: (_, __, ___) => const CircleAvatar(
                       radius: 55,
                       child: Icon(Icons.person, size: 55)),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(doctor.name,
                     style: const TextStyle(
                       fontSize: 20, fontWeight: FontWeight.bold)),
-
                   Text(doctor.specialization,
                     style: const TextStyle(
                       fontSize: 16, color: Colors.blue)),
-
                   const SizedBox(height: 8),
-
                   RatingBarIndicator(
-                    rating: doctor.rating,
+                    rating: rating,
                     itemBuilder: (_, __) =>
-                        const Icon(Icons.star, color: Colors.amber),
+                      const Icon(Icons.star, color: Colors.amber),
                     itemSize: 24,
                   ),
-
-                  Text('${doctor.rating} / 5.0'),
-
+                  Text('${rating.toStringAsFixed(1)} / 5.0'),
                   const SizedBox(height: 8),
-
                   Text('Цена приёма: ${doctor.price} ₸',
                     style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w500)),
-
                 ],
               ),
             ),
@@ -138,78 +154,48 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   const Text('О враче',
-                    style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-
                   Text(doctor.description),
-
                   const SizedBox(height: 20),
-
                   const Text('Доступные даты',
-                    style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
 
-            if (_loading)
-
-              const Center(
-                child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator()))
-
-            else if (_availableDates.isEmpty)
-
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Нет доступных слотов'))
-
-            else
-              SizedBox(
-                height: 50,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _availableDates.length,
-                  itemBuilder: (_, i) {
-                    final date     = _availableDates[i];
-                    final selected = date == _selectedDate;
-                    return Padding(
-
-                      padding: const EdgeInsets.only(right: 8),
-
-                      child: ChoiceChip(
-                        label: Text(date),
-                        selected: selected,
-                        onSelected: (_) =>
-                            setState(() => _selectedDate = date),
-                      ),
-
-                    );
-                  },
-                ),
+            SizedBox(
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _availableDates.length,
+                itemBuilder: (_, i) {
+                  final date = _availableDates[i];
+                  final selected = date == _selectedDate;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(date),
+                      selected: selected,
+                      onSelected: (_) =>
+                        setState(() => _selectedDate = date),
+                    ),
+                  );
+                },
               ),
+            ),
 
             if (_selectedDate != null)
-
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     const Text('Доступное время',
-                      style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -217,28 +203,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         _SlotButton(
                           slot: slot,
                           doctor: doctor,
+                          onBooked: () => _markSlotBooked(slot.id),
                         )
                       ).toList(),
                     ),
-
                   ],
                 ),
               ),
 
-            if (!_loading && _slots.isNotEmpty) ...[
-              const Padding(
-
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-
-                child: Text('Все слоты расписания',
-                  style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              ..._slots.map((slot) => _SlotListTile(slot: slot)),
-            ],
-
             const SizedBox(height: 32),
-
           ],
         ),
       ),
@@ -249,7 +222,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 class _SlotButton extends StatelessWidget {
   final Slot slot;
   final Doctor doctor;
-  const _SlotButton({required this.slot, required this.doctor});
+  final VoidCallback onBooked;
+  const _SlotButton({
+    required this.slot,
+    required this.doctor,
+    required this.onBooked,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -258,70 +236,21 @@ class _SlotButton extends StatelessWidget {
         backgroundColor: Colors.blue.shade50,
         foregroundColor: Colors.blue,
       ),
-
-      onPressed: () => Navigator.push(context,
-        MaterialPageRoute(
-          builder: (_) => BookingScreen(doctor: doctor, slot: slot))),
+      onPressed: () async {
+        await Navigator.push(context,
+          MaterialPageRoute(
+            builder: (_) => BookingScreen(doctor: doctor, slot: slot)));
+        onBooked();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-
           Text('${slot.startTime}–${slot.endTime}',
             style: const TextStyle(fontWeight: FontWeight.bold)),
-
-          Text(slot.statusLabel,    
-            style: const TextStyle(fontSize: 11, color: Colors.green)),
-
+          const Text('Свободно',
+            style: TextStyle(fontSize: 11, color: Colors.green)),
         ],
       ),
-    );
-  }
-}
-
-class _SlotListTile extends StatelessWidget {
-  final Slot slot;
-  const _SlotListTile({required this.slot});
-
-  @override
-  Widget build(BuildContext context) {
-    final booked = slot.isBooked;
-    return ListTile(
-      dense: true,
-
-      leading: Icon(
-        booked ? Icons.event_busy : Icons.event_available,
-        color: booked ? Colors.red : Colors.green,
-      ),
-
-      title: Text(
-        '${slot.date}   ${slot.startTime}–${slot.endTime}',
-        style: const TextStyle(fontSize: 14),
-      ),
-
-      subtitle: Text(
-        'Статус: ${slot.statusLabel}',
-        style: TextStyle(
-          fontSize: 12,
-          color: booked ? Colors.red : Colors.green,
-        ),
-      ),
-
-      trailing: booked
-      
-          ? const Chip(
-              label: Text('Занято',
-                style: TextStyle(color: Colors.white, fontSize: 11)),
-              backgroundColor: Colors.red,
-              padding: EdgeInsets.zero,
-            )
-
-          : const Chip(
-              label: Text('Свободно',
-                style: TextStyle(color: Colors.white, fontSize: 11)),
-              backgroundColor: Colors.green,
-              padding: EdgeInsets.zero,
-            ),
-
     );
   }
 }

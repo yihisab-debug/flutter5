@@ -24,7 +24,7 @@ class Doctor {
       specialization: json['specialization'] ?? '',
       photoUrl: json['photoUrl'] ?? '',
       description: json['description'] ?? '',
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      rating: ((json['rating'] as num?)?.toDouble() ?? 0.0).clamp(0.0, 5.0),
       price: (json['price'] as num?)?.toInt() ?? 0,
     );
   }
