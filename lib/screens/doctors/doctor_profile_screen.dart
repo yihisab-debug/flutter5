@@ -17,7 +17,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   List<Slot> _slots = [];
   String? _selectedDate;
 
-  // Генерируем слоты локально: 7 дней вперёд, каждый час с 09:00 до 17:00
   List<Slot> _generateSlots(String doctorId) {
     final slots = <Slot>[];
     final today = DateTime.now();

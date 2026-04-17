@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import 'complete_profile_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,15 +21,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
     try {
       await _auth.register(
-        _emailCtrl.text.trim(), _passCtrl.text.trim());
-      if (mounted) Navigator.pop(context);
+        _emailCtrl.text.trim(),
+        _passCtrl.text.trim(),
+      );
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const CompleteProfileScreen(),
+        ),
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: ${e.toString()}'),
-          backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -42,57 +65,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-
               TextFormField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder()),
-                validator: (v) => v!.contains('@')
-                  ? null : 'Некорректный email',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v!.contains('@') ? null : 'Некорректный email',
               ),
-
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _passCtrl,
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Пароль',
                   prefixIcon: Icon(Icons.lock),
-                  border: OutlineInputBorder()),
-                validator: (v) => v!.length >= 6
-                  ? null : 'Минимум 6 символов',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v!.length >= 6 ? null : 'Минимум 6 символов',
               ),
-
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _confirmCtrl,
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Повторите пароль',
                   prefixIcon: Icon(Icons.lock_outline),
-                  border: OutlineInputBorder()),
-                validator: (v) => v == _passCtrl.text
-                  ? null : 'Пароли не совпадают',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v == _passCtrl.text ? null : 'Пароли не совпадают',
               ),
-
               const SizedBox(height: 24),
-
               ElevatedButton(
                 onPressed: _loading ? null : _register,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(16),
-                  backgroundColor: Colors.blue),
+                  backgroundColor: Colors.blue,
+                ),
                 child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Зарегистрироваться',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Зарегистрироваться',
+                        style:
+                            TextStyle(color: Colors.white, fontSize: 16),
+                      ),
               ),
-              
             ],
           ),
         ),

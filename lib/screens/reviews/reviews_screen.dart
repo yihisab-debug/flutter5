@@ -60,7 +60,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         foregroundColor: Colors.white,
       ),
       body: Column(children: [
-
         Card(
           margin: const EdgeInsets.all(12),
           child: Padding(
@@ -68,7 +67,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 const Text('Оставить отзыв',
                   style: TextStyle(fontSize: 16,
                     fontWeight: FontWeight.bold)),
@@ -105,7 +103,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                       : const Text('Отправить'),
                   ),
                 ),
-
               ],
             ),
           ),
@@ -121,18 +118,15 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   itemBuilder: (_, i) {
                     final r = _reviews[i];
                     return Card(
-                      
                       margin: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 4),
                       child: ListTile(
-
                         leading: CircleAvatar(
                           child: Text(r.rating.toStringAsFixed(0))),
 
                         title: Text(r.comment),
 
                         subtitle: Row(children: [
-
                           RatingBarIndicator(
                             rating: r.rating,
                             itemSize: 14,
@@ -143,7 +137,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
 
                           Text(r.createdAt.split('T').first,
                             style: const TextStyle(fontSize: 11)),
-
                         ]),
                       ),
                     );

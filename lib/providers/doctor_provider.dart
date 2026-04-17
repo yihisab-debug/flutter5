@@ -20,7 +20,10 @@ class DoctorProvider extends ChangeNotifier {
 
   List<String> get specializations {
     final specs = _allDoctors
-      .map((d) => d.specialization).toSet().toList();
+        .map((d) => d.specialization)
+        .toSet()
+        .toList()
+      ..sort();
     return ['Все', ...specs];
   }
 
@@ -32,7 +35,10 @@ class DoctorProvider extends ChangeNotifier {
       _allDoctors = await _api.getDoctors();
       _applyFilters();
     } catch (e) {
-      error = e.toString();
+      debugPrint('DoctorProvider.loadDoctors error: $e');
+      error = 'Не удалось загрузить список врачей';
+      _allDoctors = [];
+      _filtered = [];
     } finally {
       isLoading = false;
       notifyListeners();
@@ -57,11 +63,11 @@ class DoctorProvider extends ChangeNotifier {
   void _applyFilters() {
     _filtered = _allDoctors.where((d) {
       final specOk = _filterSpec == 'Все' ||
-        d.specialization == _filterSpec;
+          d.specialization == _filterSpec;
       final ratingOk = d.rating >= _minRating;
       final searchOk = _search.isEmpty ||
-        d.name.toLowerCase().contains(_search) ||
-        d.specialization.toLowerCase().contains(_search);
+          d.name.toLowerCase().contains(_search) ||
+          d.specialization.toLowerCase().contains(_search);
       return specOk && ratingOk && searchOk;
     }).toList();
     notifyListeners();

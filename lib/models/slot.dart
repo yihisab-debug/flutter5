@@ -20,24 +20,24 @@ class Slot {
   factory Slot.fromJson(Map<String, dynamic> json) {
     final booked = json['isBooked'] == true;
     return Slot(
-      id:        json['id'].toString(),
-      doctorId:  json['doctorId'].toString(),
-      date:      json['date'] ?? '',
+      id: json['id'].toString(),
+      doctorId: json['doctorId'].toString(),
+      date: json['date'] ?? '',
       startTime: json['startTime'] ?? '',
-      endTime:   json['endTime'] ?? '',
-      isBooked:  booked,
-      status:    json['status'] ?? (booked ? 'booked' : 'available'),
+      endTime: json['endTime'] ?? '',
+      isBooked: booked,
+      status: json['status'] ?? (booked ? 'booked' : 'available'),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id':        id,
-    'doctorId':  doctorId,
-    'date':      date,
+    'id': id,
+    'doctorId': doctorId,
+    'date': date,
     'startTime': startTime,
-    'endTime':   endTime,
-    'isBooked':  isBooked,
-    'status':    status,
+    'endTime': endTime,
+    'isBooked': isBooked,
+    'status': status,
   };
 
   String get statusLabel {

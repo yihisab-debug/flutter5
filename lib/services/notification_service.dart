@@ -15,7 +15,6 @@ class NotificationService {
     );
 
   Future<void> init() async {
-
     await _fcm.requestPermission(
       alert: true, badge: true, sound: true);
 

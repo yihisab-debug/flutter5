@@ -27,31 +27,31 @@ class Appointment {
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
     return Appointment(
-      id:         json['id'].toString(),
-      userId:     json['userId'] ?? '',
-      doctorId:   json['doctorId']?.toString() ?? '',
+      id: json['id'].toString(),
+      userId: json['userId'] ?? '',
+      doctorId: json['doctorId']?.toString() ?? '',
       doctorName: json['doctorName'] ?? '',
       doctorSpec: json['doctorSpec'] ?? '',
-      slotId:     json['slotId']?.toString() ?? '',
-      date:       json['date'] ?? '',
-      startTime:  json['startTime'] ?? '',
-      endTime:    json['endTime'] ?? '',
-      status:     json['status'] ?? 'confirmed',
-      createdAt:  json['createdAt'] ?? '',
+      slotId: json['slotId']?.toString() ?? '',
+      date: json['date'] ?? '',
+      startTime: json['startTime'] ?? '',
+      endTime: json['endTime'] ?? '',
+      status: json['status'] ?? 'confirmed',
+      createdAt: json['createdAt'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id':         id,
-    'userId':     userId,
-    'doctorId':   doctorId,
+    'id': id,
+    'userId': userId,
+    'doctorId': doctorId,
     'doctorName': doctorName,
     'doctorSpec': doctorSpec,
-    'slotId':     slotId,
-    'date':       date,
-    'startTime':  startTime,
-    'endTime':    endTime,
-    'status':     status,
-    'createdAt':  createdAt,
+    'slotId': slotId,
+    'date': date,
+    'startTime': startTime,
+    'endTime': endTime,
+    'status': status,
+    'createdAt': createdAt,
   };
 }

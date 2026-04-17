@@ -30,7 +30,7 @@ class AppointmentProvider extends ChangeNotifier {
     String appointmentId, String slotId) async {
     await _api.updateAppointment(
       appointmentId, {'status': 'cancelled'});
-    // слоты теперь локальные, updateSlot не нужен
+
     final a = _appointments.firstWhere((a) => a.id == appointmentId);
     a.status = 'cancelled';
     notifyListeners();

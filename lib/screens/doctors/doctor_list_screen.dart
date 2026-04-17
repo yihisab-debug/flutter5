@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../models/doctor.dart';
 import 'doctor_profile_screen.dart';
 import '../appointments/my_appointments_screen.dart';
+import '../profile/profile_screen.dart';
 
 class DoctorListScreen extends StatefulWidget {
   const DoctorListScreen({super.key});
@@ -29,6 +30,13 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () => Navigator.push(context,
+              MaterialPageRoute(
+                builder: (_) => const ProfileScreen())),
+            tooltip: 'Профиль',
+          ),
           IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: () => Navigator.push(context,

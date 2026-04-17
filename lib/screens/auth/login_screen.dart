@@ -9,12 +9,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey    = GlobalKey<FormState>();
-  final _emailCtrl  = TextEditingController();
-  final _passCtrl   = TextEditingController();
-  final _auth       = AuthService();
-  bool _loading     = false;
-  bool _obscure     = true;
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _auth = AuthService();
+  bool _loading = false;
+  bool _obscure = true;
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -111,7 +111,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-
                 const Icon(Icons.local_hospital,
                   size: 72, color: Colors.blue),
 
@@ -233,7 +232,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
                     const Text('Нет аккаунта? '),
                     GestureDetector(
                       onTap: () => Navigator.push(context,
@@ -247,10 +245,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    
                   ],
                 ),
-
               ],
             ),
           ),
