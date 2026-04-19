@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../models/doctor.dart';
 import '../../models/slot.dart';
+import '../../providers/slot_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
@@ -16,6 +17,7 @@ class BookingScreen extends StatefulWidget {
     required this.doctor,
     required this.slot,
   });
+
   @override
   State<BookingScreen> createState() => _BookingScreenState();
 }
@@ -29,12 +31,23 @@ class _BookingScreenState extends State<BookingScreen> {
     if (_loading) return;
 
     final userProv = context.read<UserProvider>();
+    final slotProv = context.read<SlotProvider>();
     final price = widget.doctor.price;
 
     if (userProv.profile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Профиль не загружен, попробуйте позже'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (widget.slot.isBooked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Слот уже занят'),
           backgroundColor: Colors.red,
         ),
       );
@@ -48,35 +61,41 @@ class _BookingScreenState extends State<BookingScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Подтверждение оплаты'),
-        content: Text(
-          'Со счёта будет списано $price ₸.\n'
-          'Текущий баланс: ${userProv.balance} ₸\n'
-          'После оплаты: ${userProv.balance - price} ₸',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Подтверждение оплаты'),
+          content: Text(
+            'Со счёта будет списано $price ₸.\n'
+            'Текущий баланс: ${userProv.balance} ₸\n'
+            'После оплаты: ${userProv.balance - price} ₸\n\n'
+            'Запись будет создана со статусом «Ожидает подтверждения» — '
+            'врач подтвердит её в ближайшее время.',
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена'),
             ),
-            child: const Text('Оплатить'),
-          ),
-        ],
-      ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Оплатить'),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
 
     setState(() => _loading = true);
+
     bool charged = false;
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final patientName = userProv.profile?.name ?? '';
 
       await userProv.charge(price);
       charged = true;
@@ -86,14 +105,17 @@ class _BookingScreenState extends State<BookingScreen> {
         'doctorId': widget.doctor.id,
         'doctorName': widget.doctor.name,
         'doctorSpec': widget.doctor.specialization,
+        'patientName': patientName,
         'slotId': widget.slot.id,
         'date': widget.slot.date,
         'startTime': widget.slot.startTime,
         'endTime': widget.slot.endTime,
         'price': price,
-        'status': 'confirmed',
+        'status': 'pending',
         'createdAt': DateTime.now().toIso8601String(),
       });
+
+      await slotProv.markBooked(widget.slot.id);
 
       await _notifications.showBookingConfirmation(
         doctorName: widget.doctor.name,
@@ -105,7 +127,8 @@ class _BookingScreenState extends State<BookingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Запись создана! Списано $price ₸. Остаток: ${userProv.balance} ₸'),
+              'Запись создана! Списано $price ₸. Остаток: ${userProv.balance} ₸',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -129,52 +152,54 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
+
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _showNotEnoughFundsDialog(int balance, int price) async {
     final missing = price - balance;
     await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Недостаточно средств'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Стоимость приёма: $price ₸'),
-            const SizedBox(height: 4),
-            Text('Ваш баланс: $balance ₸'),
-            const SizedBox(height: 4),
-            Text(
-              'Не хватает: $missing ₸',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Пополните баланс в профиле и попробуйте снова.',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Закрыть'),
+      builder: (ctx) {
+        return AlertDialog(
+          title: Row(
+            children: const [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Недостаточно средств'),
+            ],
           ),
-        ],
-      ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Стоимость приёма: $price ₸'),
+              const SizedBox(height: 4),
+              Text('Ваш баланс: $balance ₸'),
+              const SizedBox(height: 4),
+              Text(
+                'Не хватает: $missing ₸',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Пополните баланс в профиле и попробуйте снова.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Закрыть'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -182,9 +207,22 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     final slot = widget.slot;
     final doctor = widget.doctor;
-
     final balance = context.watch<UserProvider>().balance;
     final enough = balance >= doctor.price;
+    final slotTaken = slot.isBooked;
+
+    Color statusColor = Colors.green;
+    if (slotTaken) statusColor = Colors.red;
+
+    Color buttonColor = Colors.grey;
+    if (enough && !slotTaken) buttonColor = Colors.blue;
+
+    String buttonText = 'Недостаточно средств';
+    if (slotTaken) {
+      buttonText = 'Слот занят';
+    } else if (enough) {
+      buttonText = 'Оплатить ${doctor.price} ₸ и записаться';
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -203,39 +241,44 @@ class _BookingScreenState extends State<BookingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Детали записи',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Детали записи',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Divider(),
                     _infoRow(Icons.person, 'Врач', doctor.name),
-                    _infoRow(Icons.medical_services, 'Специализация',
-                        doctor.specialization),
-                    _infoRow(Icons.calendar_today, 'Дата', slot.date),
-                    _infoRow(Icons.access_time, 'Время',
-                        '${slot.startTime}–${slot.endTime}'),
-                    _infoRow(Icons.payments, 'Стоимость',
-                        '${doctor.price} ₸'),
                     _infoRow(
-                      slot.isBooked
-                          ? Icons.event_busy
-                          : Icons.event_available,
+                      Icons.medical_services,
+                      'Специализация',
+                      doctor.specialization,
+                    ),
+                    _infoRow(Icons.calendar_today, 'Дата', slot.date),
+                    _infoRow(
+                      Icons.access_time,
+                      'Время',
+                      '${slot.startTime}–${slot.endTime}',
+                    ),
+                    _infoRow(
+                      Icons.payments,
+                      'Стоимость',
+                      '${doctor.price} ₸',
+                    ),
+                    _infoRow(
+                      slotTaken ? Icons.event_busy : Icons.event_available,
                       'Статус слота',
                       slot.statusLabel,
-                      valueColor: slot.isBooked
-                          ? Colors.red
-                          : Colors.green,
+                      valueColor: statusColor,
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 12),
-
             Card(
-              color: enough
-                  ? Colors.blue.shade50
-                  : Colors.orange.shade50,
+              color: enough ? Colors.blue.shade50 : Colors.orange.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Row(
@@ -254,7 +297,8 @@ class _BookingScreenState extends State<BookingScreen> {
                           Text(
                             'Ваш баланс: $balance ₸',
                             style: const TextStyle(
-                                fontWeight: FontWeight.w600),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -273,24 +317,23 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
             ),
-
             const Spacer(),
-
             ElevatedButton(
-              onPressed: (_loading || !enough) ? null : _confirm,
+              onPressed: (_loading || !enough || slotTaken)
+                  ? null
+                  : _confirm,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(16),
-                backgroundColor:
-                    enough ? Colors.blue : Colors.grey,
+                backgroundColor: buttonColor,
               ),
               child: _loading
                   ? const CircularProgressIndicator(color: Colors.white)
                   : Text(
-                      enough
-                          ? 'Оплатить ${doctor.price} ₸ и записаться'
-                          : 'Недостаточно средств',
+                      buttonText,
                       style: const TextStyle(
-                          fontSize: 16, color: Colors.white),
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                     ),
             ),
           ],
@@ -311,8 +354,10 @@ class _BookingScreenState extends State<BookingScreen> {
         children: [
           Icon(icon, size: 18, color: Colors.blue),
           const SizedBox(width: 8),
-          Text('$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           Expanded(
             child: Text(value, style: TextStyle(color: valueColor)),
           ),

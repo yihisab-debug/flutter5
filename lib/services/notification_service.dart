@@ -4,29 +4,29 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _local =
-    FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   static const AndroidNotificationChannel _channel =
-    AndroidNotificationChannel(
-      'appointments_channel',
-      'Записи к врачу',
-      description: 'Напоминания о предстоящих приёмах',
-      importance: Importance.high,
-    );
+      AndroidNotificationChannel(
+    'appointments_channel',
+    'Записи к врачу',
+    description: 'Напоминания о предстоящих приёмах',
+    importance: Importance.high,
+  );
 
   Future<void> init() async {
-    await _fcm.requestPermission(
-      alert: true, badge: true, sound: true);
+    await _fcm.requestPermission(alert: true, badge: true, sound: true);
 
     const androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     await _local.initialize(
-      const InitializationSettings(android: androidSettings));
+      const InitializationSettings(android: androidSettings),
+    );
 
     await _local
-      .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(_channel);
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_channel);
 
     FirebaseMessaging.onMessage.listen((message) {
       final notification = message.notification;
@@ -37,7 +37,8 @@ class NotificationService {
           notification.body,
           NotificationDetails(
             android: AndroidNotificationDetails(
-              _channel.id, _channel.name,
+              _channel.id,
+              _channel.name,
               channelDescription: _channel.description,
               importance: Importance.high,
               priority: Priority.high,
@@ -59,7 +60,8 @@ class NotificationService {
       'Приём у $doctorName — $date в $time',
       NotificationDetails(
         android: AndroidNotificationDetails(
-          _channel.id, _channel.name,
+          _channel.id,
+          _channel.name,
           importance: Importance.high,
           priority: Priority.high,
         ),

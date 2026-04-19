@@ -18,7 +18,16 @@ class Slot {
   });
 
   factory Slot.fromJson(Map<String, dynamic> json) {
-    final booked = json['isBooked'] == true;
+    bool booked = json['isBooked'] == true;
+    String status = json['status'] ?? '';
+    if (status.isEmpty) {
+      if (booked) {
+        status = 'booked';
+      } else {
+        status = 'available';
+      }
+    }
+
     return Slot(
       id: json['id'].toString(),
       doctorId: json['doctorId'].toString(),
@@ -26,27 +35,26 @@ class Slot {
       startTime: json['startTime'] ?? '',
       endTime: json['endTime'] ?? '',
       isBooked: booked,
-      status: json['status'] ?? (booked ? 'booked' : 'available'),
+      status: status,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'doctorId': doctorId,
-    'date': date,
-    'startTime': startTime,
-    'endTime': endTime,
-    'isBooked': isBooked,
-    'status': status,
-  };
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'slot',
+      'doctorId': doctorId,
+      'date': date,
+      'startTime': startTime,
+      'endTime': endTime,
+      'isBooked': isBooked,
+      'status': status,
+    };
+  }
 
   String get statusLabel {
-    switch (status) {
-      case 'booked':
-        return 'Занято';
-      case 'available':
-      default:
-        return 'Свободно';
+    if (status == 'booked') {
+      return 'Занято';
     }
+    return 'Свободно';
   }
 }

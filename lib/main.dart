@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+
 import 'firebase_options.dart';
 import 'providers/doctor_provider.dart';
 import 'providers/appointment_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/slot_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/complete_profile_screen.dart';
+import 'screens/auth/pending_role.dart';
 import 'screens/doctors/doctor_list_screen.dart';
+import 'screens/doctor/complete_doctor_profile_screen.dart';
+import 'screens/doctor/doctor_home_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -32,6 +37,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DoctorProvider()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => SlotProvider()),
       ],
       child: MaterialApp(
         title: 'Online Doctor Booking',
@@ -40,19 +46,20 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        home: const _AuthGate(),
+        home: const AuthGate(),
       ),
     );
   }
 }
 
-class _AuthGate extends StatefulWidget {
-  const _AuthGate();
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
   @override
-  State<_AuthGate> createState() => _AuthGateState();
+  State<AuthGate> createState() => _AuthGateState();
 }
 
-class _AuthGateState extends State<_AuthGate> {
+class _AuthGateState extends State<AuthGate> {
   User? _user;
   bool _authLoaded = false;
   String? _handledUid;
@@ -61,11 +68,14 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
-
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+    _authSub =
+        FirebaseAuth.instance.authStateChanges().listen((user) {
       if (!mounted) return;
-
-      final sameUser = _user?.uid == user?.uid;
+      bool sameUser = false;
+      if (_user != null && user != null) {
+        sameUser = _user!.uid == user.uid;
+      }
+      if (_user == null && user == null) sameUser = true;
 
       setState(() {
         _user = user;
@@ -88,18 +98,25 @@ class _AuthGateState extends State<_AuthGate> {
     if (user == null) {
       _handledUid = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.read<UserProvider>().clear();
+        if (!mounted) return;
+        context.read<UserProvider>().clear();
+        context.read<AppointmentProvider>().clear();
+        context.read<SlotProvider>().clear();
       });
       return;
     }
+
     if (_handledUid == user.uid) return;
     _handledUid = user.uid;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      String role = PendingRole.consume() ?? 'patient';
       context.read<UserProvider>().loadOrCreate(
             userId: user.uid,
             email: user.email ?? '',
             initialBalance: 1000,
+            pendingRole: role,
           );
     });
   }
@@ -113,7 +130,7 @@ class _AuthGateState extends State<_AuthGate> {
     }
     if (_user == null) return const LoginScreen();
 
-    return _ProfileRouter(
+    return ProfileRouter(
       user: _user!,
       onRetry: () {
         context.read<UserProvider>().loadOrCreate(
@@ -126,10 +143,15 @@ class _AuthGateState extends State<_AuthGate> {
   }
 }
 
-class _ProfileRouter extends StatelessWidget {
+class ProfileRouter extends StatelessWidget {
   final User user;
   final VoidCallback onRetry;
-  const _ProfileRouter({required this.user, required this.onRetry});
+
+  const ProfileRouter({
+    super.key,
+    required this.user,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -179,10 +201,18 @@ class _ProfileRouter extends StatelessWidget {
       );
     }
 
-    if (prov.profile!.name.trim().isEmpty) {
-      return const CompleteProfileScreen();
+    final profile = prov.profile!;
+
+    if (profile.isDoctor) {
+      if (profile.doctorId.isEmpty || profile.name.trim().isEmpty) {
+        return const CompleteDoctorProfileScreen();
+      }
+      return const DoctorHomeScreen();
     }
 
+    if (profile.name.trim().isEmpty) {
+      return const CompleteProfileScreen();
+    }
     return const DoctorListScreen();
   }
 }

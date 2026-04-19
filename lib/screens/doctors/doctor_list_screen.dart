@@ -10,6 +10,7 @@ import '../profile/profile_screen.dart';
 
 class DoctorListScreen extends StatefulWidget {
   const DoctorListScreen({super.key});
+
   @override
   State<DoctorListScreen> createState() => _DoctorListScreenState();
 }
@@ -18,8 +19,9 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() =>
-      context.read<DoctorProvider>().loadDoctors());
+    Future.microtask(() {
+      context.read<DoctorProvider>().loadDoctors();
+    });
   }
 
   @override
@@ -32,28 +34,39 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () => Navigator.push(context,
-              MaterialPageRoute(
-                builder: (_) => const ProfileScreen())),
             tooltip: 'Профиль',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.calendar_today),
-            onPressed: () => Navigator.push(context,
-              MaterialPageRoute(
-                builder: (_) => const MyAppointmentsScreen())),
             tooltip: 'Мои записи',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MyAppointmentsScreen(),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => AuthService().logout(),
             tooltip: 'Выйти',
+            onPressed: () => AuthService().logout(),
           ),
         ],
       ),
       body: Consumer<DoctorProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) return _buildShimmer();
+
           if (provider.error != null) {
             return Center(
               child: Column(
@@ -64,22 +77,26 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                   Text(provider.error!),
                   ElevatedButton(
                     onPressed: provider.loadDoctors,
-                    child: const Text('Повторить')),
+                    child: const Text('Повторить'),
+                  ),
                 ],
               ),
             );
           }
+
           return Column(
             children: [
               _buildFilters(provider),
               Expanded(
                 child: provider.doctors.isEmpty
-                  ? const Center(child: Text('Врачи не найдены'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: provider.doctors.length,
-                      itemBuilder: (ctx, i) =>
-                        _DoctorCard(doctor: provider.doctors[i])),
+                    ? const Center(child: Text('Врачи не найдены'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: provider.doctors.length,
+                        itemBuilder: (ctx, i) {
+                          return DoctorCard(doctor: provider.doctors[i]);
+                        },
+                      ),
               ),
             ],
           );
@@ -99,7 +116,8 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
               hintText: 'Поиск врача...',
               prefixIcon: Icon(Icons.search),
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(vertical: 8)),
+              contentPadding: EdgeInsets.symmetric(vertical: 8),
+            ),
             onChanged: provider.setSearch,
           ),
           const SizedBox(height: 8),
@@ -111,10 +129,12 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 child: DropdownButton<String>(
                   value: provider.filterSpec,
                   isExpanded: true,
-                  items: provider.specializations
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                  onChanged: (v) => provider.setSpecFilter(v!),
+                  items: provider.specializations.map((s) {
+                    return DropdownMenuItem(value: s, child: Text(s));
+                  }).toList(),
+                  onChanged: (v) {
+                    if (v != null) provider.setSpecFilter(v);
+                  },
                 ),
               ),
             ],
@@ -125,7 +145,9 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
               Expanded(
                 child: Slider(
                   value: provider.minRating,
-                  min: 0, max: 5, divisions: 10,
+                  min: 0,
+                  max: 5,
+                  divisions: 10,
                   onChanged: provider.setRatingFilter,
                 ),
               ),
@@ -142,22 +164,24 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
       highlightColor: Colors.grey[100]!,
       child: ListView.builder(
         itemCount: 6,
-        itemBuilder: (_, __) => Card(
-          margin: const EdgeInsets.all(8),
-          child: ListTile(
-            leading: const CircleAvatar(radius: 28),
-            title: Container(height: 14, color: Colors.white),
-            subtitle: Container(height: 10, color: Colors.white),
-          ),
-        ),
+        itemBuilder: (_, __) {
+          return Card(
+            margin: const EdgeInsets.all(8),
+            child: ListTile(
+              leading: const CircleAvatar(radius: 28),
+              title: Container(height: 14, color: Colors.white),
+              subtitle: Container(height: 10, color: Colors.white),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _DoctorCard extends StatelessWidget {
+class DoctorCard extends StatelessWidget {
   final Doctor doctor;
-  const _DoctorCard({required this.doctor});
+  const DoctorCard({super.key, required this.doctor});
 
   @override
   Widget build(BuildContext context) {
@@ -165,34 +189,45 @@ class _DoctorCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage: doctor.photoUrl.isNotEmpty
-            ? NetworkImage(doctor.photoUrl)
-            : null,
           radius: 28,
+          backgroundImage: doctor.photoUrl.isNotEmpty
+              ? NetworkImage(doctor.photoUrl)
+              : null,
           child: doctor.photoUrl.isEmpty
-            ? const Icon(Icons.person, size: 28)
-            : null,
+              ? const Icon(Icons.person, size: 28)
+              : null,
         ),
-        title: Text(doctor.name,
-          style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          doctor.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(doctor.specialization,
-              style: const TextStyle(color: Colors.blue)),
+            Text(
+              doctor.specialization,
+              style: const TextStyle(color: Colors.blue),
+            ),
             Row(
               children: [
                 const Icon(Icons.star, size: 14, color: Colors.amber),
-                Text(' ${doctor.rating.toStringAsFixed(1)}  •  ${doctor.price} ₸'),
+                Text(
+                  ' ${doctor.rating.toStringAsFixed(1)}  •  ${doctor.price} ₸',
+                ),
               ],
             ),
           ],
         ),
         isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.push(context,
-          MaterialPageRoute(
-            builder: (_) => DoctorProfileScreen(doctor: doctor))),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DoctorProfileScreen(doctor: doctor),
+            ),
+          );
+        },
       ),
     );
   }

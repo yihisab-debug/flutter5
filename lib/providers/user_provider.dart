@@ -10,15 +10,29 @@ class UserProvider extends ChangeNotifier {
   String? error;
 
   UserProfile? get profile => _profile;
-  int get balance => _profile?.balance ?? 0;
+
+  int get balance {
+    if (_profile == null) return 0;
+    return _profile!.balance;
+  }
+
+  bool get isDoctor {
+    if (_profile == null) return false;
+    return _profile!.isDoctor;
+  }
+
+  bool get isPatient {
+    if (_profile == null) return true;
+    return _profile!.isPatient;
+  }
 
   Future<void> loadOrCreate({
     required String userId,
     required String email,
     int initialBalance = 1000,
+    String pendingRole = 'patient',
   }) async {
     if (isLoading) return;
-
     if (_profile != null && _profile!.userId == userId) return;
 
     isLoading = true;
@@ -30,25 +44,28 @@ class UserProvider extends ChangeNotifier {
       if (existing != null) {
         _profile = existing;
       } else {
-        final created = await _api.createUserProfile(
-          UserProfile(
-            id: '',
-            userId: userId,
-            email: email,
-            balance: initialBalance,
-          ),
+        int startBalance = 0;
+        if (pendingRole == 'patient') {
+          startBalance = initialBalance;
+        }
+
+        final newProfile = UserProfile(
+          id: '',
+          userId: userId,
+          email: email,
+          balance: startBalance,
+          role: pendingRole,
         );
+        final created = await _api.createUserProfile(newProfile);
         _profile = created;
       }
-    } catch (e, st) {
-      debugPrint('UserProvider.loadOrCreate error: $e');
-      debugPrint('$st');
+    } catch (e) {
       error = e.toString();
       _profile = null;
-    } finally {
-      isLoading = false;
-      notifyListeners();
     }
+
+    isLoading = false;
+    notifyListeners();
   }
 
   Future<void> updateProfile({
@@ -56,13 +73,16 @@ class UserProvider extends ChangeNotifier {
     int? age,
     String? address,
     String? avatar,
+    String? doctorId,
   }) async {
     if (_profile == null) return;
-    final data = <String, dynamic>{};
+
+    Map<String, dynamic> data = {};
     if (name != null) data['name'] = name;
     if (age != null) data['age'] = age;
     if (address != null) data['address'] = address;
     if (avatar != null) data['avatar'] = avatar;
+    if (doctorId != null) data['doctorId'] = doctorId;
 
     final updated = await _api.updateUserProfile(_profile!.id, data);
     _profile = updated;
@@ -70,22 +90,31 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> topUp(int amount) async {
-    if (_profile == null || amount <= 0) return;
-    final newBalance = _profile!.balance + amount;
+    if (_profile == null) return;
+    if (amount <= 0) return;
+
+    int newBalance = _profile!.balance + amount;
     final updated = await _api.updateUserProfile(
-      _profile!.id, {'balance': newBalance});
+      _profile!.id,
+      {'balance': newBalance},
+    );
     _profile = updated;
     notifyListeners();
   }
 
   Future<void> charge(int amount) async {
-    if (_profile == null) throw Exception('Профиль не загружен');
+    if (_profile == null) {
+      throw Exception('Профиль не загружен');
+    }
     if (_profile!.balance < amount) {
       throw Exception('Недостаточно средств');
     }
-    final newBalance = _profile!.balance - amount;
+
+    int newBalance = _profile!.balance - amount;
     final updated = await _api.updateUserProfile(
-      _profile!.id, {'balance': newBalance});
+      _profile!.id,
+      {'balance': newBalance},
+    );
     _profile = updated;
     notifyListeners();
   }

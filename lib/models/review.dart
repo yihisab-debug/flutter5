@@ -26,11 +26,13 @@ class Review {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'doctorId': doctorId,
-    'rating': rating,
-    'comment': comment,
-    'createdAt': DateTime.now().toIso8601String(),
-  };
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'doctorId': doctorId,
+      'rating': rating,
+      'comment': comment,
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+  }
 }

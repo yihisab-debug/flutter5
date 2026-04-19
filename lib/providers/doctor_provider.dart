@@ -19,11 +19,13 @@ class DoctorProvider extends ChangeNotifier {
   double get minRating => _minRating;
 
   List<String> get specializations {
-    final specs = _allDoctors
-        .map((d) => d.specialization)
-        .toSet()
-        .toList()
-      ..sort();
+    List<String> specs = [];
+    for (var d in _allDoctors) {
+      if (!specs.contains(d.specialization)) {
+        specs.add(d.specialization);
+      }
+    }
+    specs.sort();
     return ['Все', ...specs];
   }
 
@@ -31,18 +33,18 @@ class DoctorProvider extends ChangeNotifier {
     isLoading = true;
     error = null;
     notifyListeners();
+
     try {
       _allDoctors = await _api.getDoctors();
       _applyFilters();
     } catch (e) {
-      debugPrint('DoctorProvider.loadDoctors error: $e');
       error = 'Не удалось загрузить список врачей';
       _allDoctors = [];
       _filtered = [];
-    } finally {
-      isLoading = false;
-      notifyListeners();
     }
+
+    isLoading = false;
+    notifyListeners();
   }
 
   void setSpecFilter(String spec) {
@@ -61,15 +63,22 @@ class DoctorProvider extends ChangeNotifier {
   }
 
   void _applyFilters() {
-    _filtered = _allDoctors.where((d) {
-      final specOk = _filterSpec == 'Все' ||
-          d.specialization == _filterSpec;
-      final ratingOk = d.rating >= _minRating;
-      final searchOk = _search.isEmpty ||
-          d.name.toLowerCase().contains(_search) ||
-          d.specialization.toLowerCase().contains(_search);
-      return specOk && ratingOk && searchOk;
-    }).toList();
+    List<Doctor> result = [];
+    for (var d in _allDoctors) {
+      bool specOk = _filterSpec == 'Все' || d.specialization == _filterSpec;
+      bool ratingOk = d.rating >= _minRating;
+      bool searchOk = true;
+      if (_search.isNotEmpty) {
+        final nameMatch = d.name.toLowerCase().contains(_search);
+        final specMatch = d.specialization.toLowerCase().contains(_search);
+        searchOk = nameMatch || specMatch;
+      }
+
+      if (specOk && ratingOk && searchOk) {
+        result.add(d);
+      }
+    }
+    _filtered = result;
     notifyListeners();
   }
 }

@@ -1,58 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/doctor.dart';
 import '../../providers/user_provider.dart';
+import '../../services/api_service.dart';
 
-class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+class DoctorProfileEditScreen extends StatefulWidget {
+  final Doctor doctor;
+  const DoctorProfileEditScreen({super.key, required this.doctor});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  State<DoctorProfileEditScreen> createState() =>
+      _DoctorProfileEditScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _DoctorProfileEditScreenState extends State<DoctorProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _api = ApiService();
+
   late TextEditingController _nameCtrl;
-  late TextEditingController _ageCtrl;
-  late TextEditingController _addressCtrl;
-  late TextEditingController _avatarCtrl;
+  late TextEditingController _specCtrl;
+  late TextEditingController _descCtrl;
+  late TextEditingController _priceCtrl;
+  late TextEditingController _photoCtrl;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    final p = context.read<UserProvider>().profile;
-
-    _nameCtrl = TextEditingController(text: p?.name ?? '');
-
-    String ageText = '';
-    if (p != null && p.age > 0) ageText = '${p.age}';
-    _ageCtrl = TextEditingController(text: ageText);
-
-    _addressCtrl = TextEditingController(text: p?.address ?? '');
-    _avatarCtrl = TextEditingController(text: p?.avatar ?? '');
+    final d = widget.doctor;
+    _nameCtrl = TextEditingController(text: d.name);
+    _specCtrl = TextEditingController(text: d.specialization);
+    _descCtrl = TextEditingController(text: d.description);
+    _priceCtrl = TextEditingController(text: '${d.price}');
+    _photoCtrl = TextEditingController(text: d.photoUrl);
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _ageCtrl.dispose();
-    _addressCtrl.dispose();
-    _avatarCtrl.dispose();
+    _specCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _photoCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
+    if (_saving) return;
 
+    setState(() => _saving = true);
     try {
-      int age = int.tryParse(_ageCtrl.text.trim()) ?? 0;
-      await context.read<UserProvider>().updateProfile(
-            name: _nameCtrl.text.trim(),
-            age: age,
-            address: _addressCtrl.text.trim(),
-            avatar: _avatarCtrl.text.trim(),
-          );
+      final name = _nameCtrl.text.trim();
+
+      Map<String, dynamic> data = {
+        'name': name,
+        'specialization': _specCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
+        'price': int.parse(_priceCtrl.text.trim()),
+        'photoUrl': _photoCtrl.text.trim(),
+      };
+
+      await _api.updateDoctor(widget.doctor.id, data);
+
+      if (mounted) {
+        await context.read<UserProvider>().updateProfile(name: name);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -80,7 +94,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Редактирование профиля'),
+        title: const Text('Редактировать профиль'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -93,9 +107,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               Center(
                 child: AnimatedBuilder(
-                  animation: _avatarCtrl,
+                  animation: _photoCtrl,
                   builder: (_, __) {
-                    final url = _avatarCtrl.text.trim();
+                    final url = _photoCtrl.text.trim();
                     return CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.blue.shade100,
@@ -107,7 +121,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           : null,
                       child: url.isEmpty
                           ? const Icon(
-                              Icons.person,
+                              Icons.medical_services,
                               size: 50,
                               color: Colors.blue,
                             )
@@ -133,39 +147,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _ageCtrl,
-                keyboardType: TextInputType.number,
+                controller: _specCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Возраст',
-                  prefixIcon: Icon(Icons.cake),
+                  labelText: 'Специализация',
+                  prefixIcon: Icon(Icons.local_hospital),
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  final n = int.tryParse(v.trim());
-                  if (n == null || n < 0 || n > 120) {
-                    return 'Некорректный возраст';
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Укажите специализацию';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _addressCtrl,
+                controller: _descCtrl,
+                maxLines: 4,
                 decoration: const InputDecoration(
-                  labelText: 'Адрес',
-                  prefixIcon: Icon(Icons.home),
+                  labelText: 'Описание',
+                  prefixIcon: Icon(Icons.description),
                   border: OutlineInputBorder(),
                 ),
+                validator: (v) {
+                  if (v == null || v.trim().length < 10) {
+                    return 'Минимум 10 символов';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _avatarCtrl,
+                controller: _priceCtrl,
+                keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Аватар (URL)',
-                  prefixIcon: Icon(Icons.image),
+                  labelText: 'Цена приёма, ₸',
+                  prefixIcon: Icon(Icons.payments),
                   border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  final n = int.tryParse((v ?? '').trim());
+                  if (n == null || n <= 0) {
+                    return 'Введите положительное число';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _photoCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Фото (URL)',
+                  prefixIcon: Icon(Icons.image),
                   hintText: 'https://...',
+                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 24),

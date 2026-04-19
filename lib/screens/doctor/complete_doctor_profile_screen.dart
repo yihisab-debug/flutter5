@@ -1,28 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import '../../models/doctor.dart';
 import '../../providers/user_provider.dart';
+import '../../services/api_service.dart';
 
-class CompleteProfileScreen extends StatefulWidget {
-  const CompleteProfileScreen({super.key});
+class CompleteDoctorProfileScreen extends StatefulWidget {
+  const CompleteDoctorProfileScreen({super.key});
 
   @override
-  State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
+  State<CompleteDoctorProfileScreen> createState() =>
+      _CompleteDoctorProfileScreenState();
 }
 
-class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
+class _CompleteDoctorProfileScreenState
+    extends State<CompleteDoctorProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _api = ApiService();
+
   final _nameCtrl = TextEditingController();
-  final _ageCtrl = TextEditingController();
-  final _addressCtrl = TextEditingController();
-  final _avatarCtrl = TextEditingController();
+  final _specCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _photoCtrl = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _ageCtrl.dispose();
-    _addressCtrl.dispose();
-    _avatarCtrl.dispose();
+    _specCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _photoCtrl.dispose();
     super.dispose();
   }
 
@@ -30,18 +39,39 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_saving) return;
 
+    final userProv = context.read<UserProvider>();
+    if (userProv.profile == null) return;
+
     setState(() => _saving = true);
     try {
-      await context.read<UserProvider>().updateProfile(
-            name: _nameCtrl.text.trim(),
-            age: int.parse(_ageCtrl.text.trim()),
-            address: _addressCtrl.text.trim(),
-            avatar: _avatarCtrl.text.trim(),
-          );
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final name = _nameCtrl.text.trim();
+      final spec = _specCtrl.text.trim();
+      final desc = _descCtrl.text.trim();
+      final price = int.parse(_priceCtrl.text.trim());
+      final photo = _photoCtrl.text.trim();
+
+      final newDoctor = Doctor(
+        id: '',
+        name: name,
+        specialization: spec,
+        description: desc,
+        photoUrl: photo,
+        rating: 0.0,
+        price: price,
+        ownerUid: uid,
+      );
+      final createdDoctor = await _api.createDoctor(newDoctor);
+
+      await userProv.updateProfile(
+        name: name,
+        doctorId: createdDoctor.id,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Профиль сохранён'),
+            content: Text('Профиль врача создан'),
             backgroundColor: Colors.green,
           ),
         );
@@ -56,6 +86,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
       }
     }
+
     if (mounted) setState(() => _saving = false);
   }
 
@@ -65,10 +96,17 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       canPop: false,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Заполните профиль'),
+          title: const Text('Профиль врача'),
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Выйти',
+              onPressed: () => FirebaseAuth.instance.signOut(),
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -78,11 +116,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 8),
-                const Icon(Icons.account_circle,
-                    size: 72, color: Colors.blue),
+                const Icon(
+                  Icons.medical_services,
+                  size: 72,
+                  color: Colors.blue,
+                ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Расскажите о себе',
+                  'Расскажите пациентам о себе',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
@@ -91,11 +132,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Это займёт меньше минуты',
+                  'Эти данные увидят пациенты при выборе врача',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
                 TextFormField(
                   controller: _nameCtrl,
                   textCapitalization: TextCapitalization.words,
@@ -113,49 +154,63 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _ageCtrl,
-                  keyboardType: TextInputType.number,
+                  controller: _specCtrl,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    labelText: 'Возраст',
-                    prefixIcon: Icon(Icons.cake),
+                    labelText: 'Специализация',
+                    prefixIcon: Icon(Icons.local_hospital),
+                    hintText: 'Например, Кардиолог',
                     border: OutlineInputBorder(),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return 'Введите возраст';
-                    }
-                    final n = int.tryParse(v.trim());
-                    if (n == null || n < 1 || n > 120) {
-                      return 'Некорректный возраст';
+                      return 'Укажите специализацию';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _addressCtrl,
+                  controller: _descCtrl,
+                  maxLines: 4,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
-                    labelText: 'Место проживания',
-                    prefixIcon: Icon(Icons.home),
+                    labelText: 'Описание / опыт',
+                    prefixIcon: Icon(Icons.description),
                     border: OutlineInputBorder(),
-                    hintText: 'Город, улица, дом',
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Введите адрес';
+                    if (v == null || v.trim().length < 10) {
+                      return 'Минимум 10 символов';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _avatarCtrl,
+                  controller: _priceCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'Аватар — URL (необязательно)',
-                    prefixIcon: Icon(Icons.image),
+                    labelText: 'Цена приёма, ₸',
+                    prefixIcon: Icon(Icons.payments),
                     border: OutlineInputBorder(),
+                  ),
+                  validator: (v) {
+                    final n = int.tryParse((v ?? '').trim());
+                    if (n == null || n <= 0) {
+                      return 'Введите положительное число';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _photoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Фото — URL (необязательно)',
+                    prefixIcon: Icon(Icons.image),
                     hintText: 'https://...',
+                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 28),

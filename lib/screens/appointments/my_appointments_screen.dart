@@ -18,10 +18,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     Future.microtask(() {
-      context.read<AppointmentProvider>().loadAppointments(uid);
+      context.read<AppointmentProvider>().loadForPatient(uid);
     });
   }
 
@@ -31,6 +31,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    await context.read<AppointmentProvider>().loadForPatient(uid);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,13 +43,24 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
         title: const Text('Мои записи'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+            tooltip: 'Обновить',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
+          indicatorColor: Colors.white,
           tabs: const [
-            Tab(text: 'Предстоящие'),
-            Tab(text: 'Отменённые'),
+            Tab(text: 'Ожидают'),
+            Tab(text: 'Подтверждены'),
+            Tab(text: 'Завершены'),
+            Tab(text: 'Отменены'),
           ],
         ),
       ),
@@ -56,7 +72,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
           return TabBarView(
             controller: _tabController,
             children: [
-              _buildList(provider.upcoming, canCancel: true),
+              _buildList(provider.pending, canCancel: true),
+              _buildList(provider.confirmed, canCancel: true),
+              _buildList(provider.completed, canCancel: false),
               _buildList(provider.cancelled, canCancel: false),
             ],
           );
@@ -67,43 +85,62 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
 
   Widget _buildList(List<Appointment> list, {required bool canCancel}) {
     if (list.isEmpty) {
-      return const Center(child: Text('Нет записей'));
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 120),
+            Center(child: Text('Нет записей')),
+          ],
+        ),
+      );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: list.length,
-      itemBuilder: (ctx, i) {
-        final a = list[i];
-        return _AppointmentCard(
-          appointment: a,
-          canCancel: canCancel,
-          onCancel: () => _cancel(ctx, a),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(8),
+        itemCount: list.length,
+        itemBuilder: (ctx, i) {
+          final a = list[i];
+          return AppointmentCard(
+            appointment: a,
+            canCancel: canCancel,
+            onCancel: () => _cancel(ctx, a),
+          );
+        },
+      ),
     );
   }
 
   Future<void> _cancel(BuildContext ctx, Appointment a) async {
     final confirm = await showDialog<bool>(
       context: ctx,
-      builder: (dCtx) => AlertDialog(
-        title: const Text('Отмена записи'),
-        content: const Text('Вы уверены, что хотите отменить запись?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dCtx, false),
-            child: const Text('Нет'),
+      builder: (dCtx) {
+        return AlertDialog(
+          title: const Text('Отмена записи'),
+          content: const Text(
+            'Вы уверены, что хотите отменить запись? Сумма не возвращается.',
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(dCtx, true),
-            child: const Text('Да', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dCtx, false),
+              child: const Text('Нет'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dCtx, true),
+              child: const Text(
+                'Да',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirm == true && ctx.mounted) {
-      await ctx.read<AppointmentProvider>().cancelAppointment(a.id, a.slotId);
+      await ctx.read<AppointmentProvider>().cancelByPatient(a.id);
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(content: Text('Запись отменена')),
@@ -113,12 +150,13 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
   }
 }
 
-class _AppointmentCard extends StatelessWidget {
+class AppointmentCard extends StatelessWidget {
   final Appointment appointment;
   final bool canCancel;
   final VoidCallback onCancel;
 
-  const _AppointmentCard({
+  const AppointmentCard({
+    super.key,
     required this.appointment,
     required this.canCancel,
     required this.onCancel,
@@ -128,9 +166,28 @@ class _AppointmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = appointment;
 
-    final doctorDisplay = a.doctorName.isNotEmpty
-        ? a.doctorName
-        : 'Врач ID: ${a.doctorId}';
+    Color statusColor = Colors.red;
+    IconData statusIcon = Icons.cancel;
+    String statusLabel = 'Отменено';
+
+    if (a.status == 'pending') {
+      statusColor = Colors.orange;
+      statusIcon = Icons.schedule;
+      statusLabel = 'Ожидает';
+    } else if (a.status == 'confirmed') {
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
+      statusLabel = 'Подтверждено';
+    } else if (a.status == 'completed') {
+      statusColor = Colors.blue;
+      statusIcon = Icons.done_all;
+      statusLabel = 'Завершено';
+    }
+
+    String doctorDisplay = a.doctorName;
+    if (doctorDisplay.isEmpty) {
+      doctorDisplay = 'Врач ID: ${a.doctorId}';
+    }
 
     String dateDisplay = a.date;
     if (dateDisplay.isEmpty && a.createdAt.isNotEmpty) {
@@ -138,13 +195,13 @@ class _AppointmentCard extends StatelessWidget {
     }
     if (dateDisplay.isEmpty) dateDisplay = 'Не указана';
 
-    String timeDisplay;
+    String timeDisplay = 'Не указано';
     if (a.startTime.isNotEmpty) {
-      timeDisplay = a.endTime.isNotEmpty
-          ? '${a.startTime} – ${a.endTime}'
-          : a.startTime;
-    } else {
-      timeDisplay = 'Не указано';
+      if (a.endTime.isNotEmpty) {
+        timeDisplay = '${a.startTime} – ${a.endTime}';
+      } else {
+        timeDisplay = a.startTime;
+      }
     }
 
     return Card(
@@ -155,11 +212,8 @@ class _AppointmentCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              backgroundColor: canCancel ? Colors.blue : Colors.grey,
-              child: Icon(
-                canCancel ? Icons.event_available : Icons.event_busy,
-                color: Colors.white,
-              ),
+              backgroundColor: statusColor,
+              child: Icon(statusIcon, color: Colors.white),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -177,26 +231,33 @@ class _AppointmentCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       a.doctorSpec,
-                      style: const TextStyle(color: Colors.blue, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 6),
                   _row(Icons.calendar_today, 'Дата', dateDisplay),
                   _row(Icons.access_time, 'Время', timeDisplay),
                   _row(
-                    canCancel ? Icons.check_circle : Icons.cancel,
+                    statusIcon,
                     'Статус',
-                    canCancel ? 'Подтверждено' : 'Отменено',
-                    valueColor: canCancel ? Colors.green : Colors.red,
+                    statusLabel,
+                    valueColor: statusColor,
                   ),
+                  if (a.price > 0)
+                    _row(Icons.payments, 'Сумма', '${a.price} ₸'),
                 ],
               ),
             ),
             if (canCancel)
               TextButton(
                 onPressed: onCancel,
-                child: const Text('Отмена',
-                    style: TextStyle(color: Colors.red)),
+                child: const Text(
+                  'Отмена',
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
           ],
         ),
@@ -204,19 +265,29 @@ class _AppointmentCard extends StatelessWidget {
     );
   }
 
-  Widget _row(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _row(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: Row(
         children: [
           Icon(icon, size: 14, color: Colors.grey),
           const SizedBox(width: 4),
-          Text('$label: ',
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+          ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontSize: 13, color: valueColor ?? Colors.black87),
+              style: TextStyle(
+                fontSize: 13,
+                color: valueColor ?? Colors.black87,
+              ),
             ),
           ),
         ],

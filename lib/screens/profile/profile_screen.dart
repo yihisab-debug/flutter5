@@ -19,11 +19,14 @@ class ProfileScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Редактировать',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const EditProfileScreen()),
-            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const EditProfileScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -38,19 +41,33 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: Colors.grey),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 8),
                   const Text('Профиль не загружен'),
                   if (prov.error != null) ...[
                     const SizedBox(height: 8),
-                    Text(prov.error!,
-                        style: const TextStyle(color: Colors.red)),
+                    Text(
+                      prov.error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ],
                 ],
               ),
             );
           }
+
+          String nameDisplay = 'Имя не указано';
+          if (p.name.isNotEmpty) nameDisplay = p.name;
+
+          String ageDisplay = '—';
+          if (p.age > 0) ageDisplay = '${p.age}';
+
+          String addressDisplay = '—';
+          if (p.address.isNotEmpty) addressDisplay = p.address;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -65,15 +82,20 @@ class ProfileScreen extends StatelessWidget {
                           ? NetworkImage(p.avatar)
                           : null,
                       child: p.avatar.isEmpty
-                          ? const Icon(Icons.person,
-                              size: 50, color: Colors.blue)
+                          ? const Icon(
+                              Icons.person,
+                              size: 50,
+                              color: Colors.blue,
+                            )
                           : null,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      p.name.isNotEmpty ? p.name : 'Имя не указано',
+                      nameDisplay,
                       style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -84,7 +106,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
               Card(
                 color: Colors.blue.shade50,
                 child: Padding(
@@ -94,15 +115,18 @@ class ProfileScreen extends StatelessWidget {
                       const Text(
                         'Баланс',
                         style: TextStyle(
-                            fontSize: 14, color: Colors.grey),
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${p.balance} ₸',
                         style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue),
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -118,7 +142,8 @@ class ProfileScreen extends StatelessWidget {
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                vertical: 12),
+                              vertical: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -127,7 +152,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -137,15 +161,14 @@ class ProfileScreen extends StatelessWidget {
                       const Text(
                         'Личные данные',
                         style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Divider(),
-                      _row(Icons.person, 'Имя',
-                          p.name.isNotEmpty ? p.name : '—'),
-                      _row(Icons.cake, 'Возраст',
-                          p.age > 0 ? '${p.age}' : '—'),
-                      _row(Icons.home, 'Адрес',
-                          p.address.isNotEmpty ? p.address : '—'),
+                      _row(Icons.person, 'Имя', nameDisplay),
+                      _row(Icons.cake, 'Возраст', ageDisplay),
+                      _row(Icons.home, 'Адрес', addressDisplay),
                       _row(Icons.email, 'Email', p.email),
                     ],
                   ),
@@ -189,8 +212,10 @@ class ProfileScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: Colors.blue),
           const SizedBox(width: 8),
-          Text('$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           Expanded(child: Text(value)),
         ],
       ),
