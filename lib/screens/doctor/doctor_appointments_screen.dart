@@ -31,9 +31,12 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
   }
 
   Future<void> _load() async {
-    final doctorId = context.read<UserProvider>().profile?.doctorId ?? '';
+    final userProv = context.read<UserProvider>();
+    final doctorId = userProv.profile?.doctorId ?? '';
     if (doctorId.isEmpty) return;
     await context.read<AppointmentProvider>().loadForDoctor(doctorId);
+    // Обновляем баланс врача — мог измениться из-за новых записей/отмен.
+    await userProv.reload();
   }
 
   @override
@@ -134,15 +137,34 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
   Future<void> _cancelAppointment(Appointment a) async {
     final ok = await _confirmDialog(
       title: 'Отменить запись?',
-      body: 'Слот будет снова доступен для других пациентов.',
+      body:
+          'Пациенту будет возвращено ${a.price} ₸.\n'
+          'Сумма будет списана с вашего баланса.\n'
+          'Слот снова станет доступен для записи.',
     );
     if (ok != true) return;
 
-    await context.read<AppointmentProvider>().cancelByDoctor(a.id);
+    final apptProv = context.read<AppointmentProvider>();
+    final slotProv = context.read<SlotProvider>();
+    final userProv = context.read<UserProvider>();
+
+    final refundOk = await apptProv.cancelByDoctor(a.id);
+
     if (a.slotId.isNotEmpty) {
-      await context.read<SlotProvider>().markFree(a.slotId);
+      await slotProv.markFree(a.slotId);
     }
-    _snack('Запись отменена', Colors.red);
+
+    // Обновляем баланс врача после возврата
+    await userProv.reload();
+
+    if (refundOk) {
+      _snack('Запись отменена, пациенту возвращено ${a.price} ₸', Colors.red);
+    } else {
+      _snack(
+        'Запись отменена, но возврат прошёл с ошибкой',
+        Colors.orange,
+      );
+    }
   }
 
   Future<void> _completeAppointment(Appointment a) async {

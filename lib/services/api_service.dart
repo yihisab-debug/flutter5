@@ -140,6 +140,21 @@ class ApiService {
     return null;
   }
 
+  Future<UserProfile?> getUserProfileByDoctorId(String doctorId) async {
+    if (doctorId.isEmpty) return null;
+    final res = await _dio.get(projectUrl);
+    final List raw = res.data as List;
+    for (var j in raw) {
+      if (j is Map &&
+          j['type'] == 'user' &&
+          j['role'] == 'doctor' &&
+          j['doctorId']?.toString() == doctorId) {
+        return UserProfile.fromJson(Map<String, dynamic>.from(j));
+      }
+    }
+    return null;
+  }
+
   Future<UserProfile> createUserProfile(UserProfile profile) async {
     final res = await _dio.post(projectUrl, data: profile.toJson());
     return UserProfile.fromJson(Map<String, dynamic>.from(res.data));
@@ -149,5 +164,43 @@ class ApiService {
       String id, Map<String, dynamic> data) async {
     final res = await _dio.put('$projectUrl/$id', data: data);
     return UserProfile.fromJson(Map<String, dynamic>.from(res.data));
+  }
+
+  /// Начисляет сумму на баланс врача (находит UserProfile врача по doctorId).
+  /// Возвращает true, если операция успешна. Не кидает исключение —
+  /// чтобы не ломать основной flow записи/отмены.
+  Future<bool> creditDoctorBalance(String doctorId, int amount) async {
+    if (doctorId.isEmpty || amount <= 0) return false;
+    try {
+      final doctorProfile = await getUserProfileByDoctorId(doctorId);
+      if (doctorProfile == null) return false;
+      final newBalance = doctorProfile.balance + amount;
+      await _dio.put(
+        '$projectUrl/${doctorProfile.id}',
+        data: {'balance': newBalance},
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Списывает сумму с баланса врача (при отмене врачом — возврат пациенту).
+  /// Если на балансе недостаточно — списывает до 0, но не уходит в минус.
+  Future<bool> debitDoctorBalance(String doctorId, int amount) async {
+    if (doctorId.isEmpty || amount <= 0) return false;
+    try {
+      final doctorProfile = await getUserProfileByDoctorId(doctorId);
+      if (doctorProfile == null) return false;
+      int newBalance = doctorProfile.balance - amount;
+      if (newBalance < 0) newBalance = 0;
+      await _dio.put(
+        '$projectUrl/${doctorProfile.id}',
+        data: {'balance': newBalance},
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }

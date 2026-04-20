@@ -52,6 +52,13 @@ class AppointmentProvider extends ChangeNotifier {
     return result;
   }
 
+  Appointment? _findById(String id) {
+    for (var a in _appointments) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
+
   Future<void> loadForPatient(String userId) async {
     isLoading = true;
     notifyListeners();
@@ -88,6 +95,7 @@ class AppointmentProvider extends ChangeNotifier {
   }
 
   Future<void> cancelByPatient(String appointmentId) async {
+    // Отмена пациентом — деньги НЕ возвращаются (ни пациенту, ни с врача).
     await setStatus(appointmentId, 'cancelled');
   }
 
@@ -95,8 +103,36 @@ class AppointmentProvider extends ChangeNotifier {
     await setStatus(appointmentId, 'confirmed');
   }
 
-  Future<void> cancelByDoctor(String appointmentId) async {
+  /// Отмена врачом — возврат средств пациенту и списание с баланса врача.
+  /// Возвращает true, если возврат прошёл успешно.
+  Future<bool> cancelByDoctor(String appointmentId) async {
+    final appt = _findById(appointmentId);
     await setStatus(appointmentId, 'cancelled');
+
+    if (appt == null || appt.price <= 0) return true;
+
+    bool ok = true;
+
+    // Списываем деньги у врача (он получил их при записи)
+    final debited = await _api.debitDoctorBalance(appt.doctorId, appt.price);
+    if (!debited) ok = false;
+
+    // Возвращаем пациенту
+    final patientProfile = await _api.getUserProfile(appt.userId);
+    if (patientProfile != null) {
+      try {
+        await _api.updateUserProfile(
+          patientProfile.id,
+          {'balance': patientProfile.balance + appt.price},
+        );
+      } catch (_) {
+        ok = false;
+      }
+    } else {
+      ok = false;
+    }
+
+    return ok;
   }
 
   Future<void> completeByDoctor(String appointmentId) async {

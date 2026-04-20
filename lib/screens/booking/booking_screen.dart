@@ -117,6 +117,19 @@ class _BookingScreenState extends State<BookingScreen> {
 
       await slotProv.markBooked(widget.slot.id);
 
+      // Начисляем деньги на баланс врача.
+      // Если не получилось — пациент уже заплатил, запись создана;
+      // не откатываем, т.к. MockAPI не даёт транзакций. Просто логируем.
+      final credited = await _api.creditDoctorBalance(
+        widget.doctor.id,
+        price,
+      );
+      if (!credited) {
+        debugPrint(
+          'WARN: не удалось начислить $price ₸ врачу ${widget.doctor.id}',
+        );
+      }
+
       await _notifications.showBookingConfirmation(
         doctorName: widget.doctor.name,
         date: widget.slot.date,

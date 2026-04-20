@@ -26,7 +26,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   }
 
   Future<void> _load() async {
-    final doctorId = context.read<UserProvider>().profile?.doctorId ?? '';
+    final userProv = context.read<UserProvider>();
+    final doctorId = userProv.profile?.doctorId ?? '';
     if (doctorId.isEmpty) {
       setState(() {
         _loading = false;
@@ -42,12 +43,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
     try {
       final d = await _api.getDoctorById(doctorId);
+      // Обновляем баланс — мог измениться из-за новых записей.
+      await userProv.reload();
+      if (!mounted) return;
       setState(() {
         _doctor = d;
         _loading = false;
         if (d == null) _error = 'Карточка врача не найдена';
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = e.toString();
@@ -92,11 +97,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           ),
         ],
       ),
-      body: _buildBody(user?.email ?? ''),
+      body: _buildBody(user),
     );
   }
 
-  Widget _buildBody(String email) {
+  Widget _buildBody(dynamic user) {
+    final email = user?.email ?? '';
+    final balance = user?.balance ?? 0;
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -167,6 +175,54 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          // Карточка баланса врача
+          Card(
+            color: Colors.green.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet,
+                      color: Colors.green,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Заработано',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$balance ₸',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Card(
             color: Colors.blue.shade50,
             child: Padding(
