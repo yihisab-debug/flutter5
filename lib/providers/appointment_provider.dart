@@ -95,7 +95,6 @@ class AppointmentProvider extends ChangeNotifier {
   }
 
   Future<void> cancelByPatient(String appointmentId) async {
-    // Отмена пациентом — деньги НЕ возвращаются (ни пациенту, ни с врача).
     await setStatus(appointmentId, 'cancelled');
   }
 
@@ -103,8 +102,6 @@ class AppointmentProvider extends ChangeNotifier {
     await setStatus(appointmentId, 'confirmed');
   }
 
-  /// Отмена врачом — возврат средств пациенту и списание с баланса врача.
-  /// Возвращает true, если возврат прошёл успешно.
   Future<bool> cancelByDoctor(String appointmentId) async {
     final appt = _findById(appointmentId);
     await setStatus(appointmentId, 'cancelled');
@@ -113,11 +110,9 @@ class AppointmentProvider extends ChangeNotifier {
 
     bool ok = true;
 
-    // Списываем деньги у врача (он получил их при записи)
     final debited = await _api.debitDoctorBalance(appt.doctorId, appt.price);
     if (!debited) ok = false;
 
-    // Возвращаем пациенту
     final patientProfile = await _api.getUserProfile(appt.userId);
     if (patientProfile != null) {
       try {

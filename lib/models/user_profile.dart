@@ -9,6 +9,7 @@ class UserProfile {
   int balance;
   String role;
   String doctorId;
+  bool isBlocked;
 
   UserProfile({
     required this.id,
@@ -21,10 +22,12 @@ class UserProfile {
     this.balance = 0,
     this.role = 'patient',
     this.doctorId = '',
+    this.isBlocked = false,
   });
 
   bool get isDoctor => role == 'doctor';
   bool get isPatient => role == 'patient';
+  bool get isAdmin => role == 'admin';
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -38,6 +41,7 @@ class UserProfile {
       balance: (json['balance'] as num?)?.toInt() ?? 0,
       role: (json['role'] ?? 'patient').toString(),
       doctorId: (json['doctorId'] ?? '').toString(),
+      isBlocked: json['isBlocked'] == true,
     );
   }
 
@@ -53,6 +57,7 @@ class UserProfile {
       'balance': balance,
       'role': role,
       'doctorId': doctorId,
+      'isBlocked': isBlocked,
     };
   }
 }

@@ -68,8 +68,6 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Перечитывает профиль с сервера — нужно, чтобы увидеть свежий баланс
-  /// после операций, меняющих его извне (начисления от записей, возвраты).
   Future<void> reload() async {
     if (_profile == null) return;
     try {

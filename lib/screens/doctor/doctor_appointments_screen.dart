@@ -35,7 +35,6 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
     final doctorId = userProv.profile?.doctorId ?? '';
     if (doctorId.isEmpty) return;
     await context.read<AppointmentProvider>().loadForDoctor(doctorId);
-    // Обновляем баланс врача — мог измениться из-за новых записей/отмен.
     await userProv.reload();
   }
 
@@ -154,7 +153,6 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen>
       await slotProv.markFree(a.slotId);
     }
 
-    // Обновляем баланс врача после возврата
     await userProv.reload();
 
     if (refundOk) {

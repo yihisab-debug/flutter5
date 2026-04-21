@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../services/admin_session.dart';
 import '../../services/auth_service.dart';
+import '../admin/admin_home_screen.dart';
 import 'pending_role.dart';
 import 'register_screen.dart';
 
@@ -135,6 +137,102 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _adminLogin() async {
+    final passCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
+          title: Row(
+            children: const [
+              Icon(Icons.admin_panel_settings, color: Colors.deepPurple),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Вход админа',
+                  style: TextStyle(fontSize: 18),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Введите пароль администратора',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passCtrl,
+                obscureText: true,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Пароль',
+                  prefixIcon: Icon(Icons.lock),
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => Navigator.pop(ctx, true),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Подсказка: пароль 1234',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Отмена'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Войти'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (ok != true) return;
+
+    final success = AdminSession.instance.tryLogin(passCtrl.text.trim());
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Неверный пароль'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+      );
+    }
+  }
+
   Future<void> _resetPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
@@ -186,6 +284,21 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _loading ? null : _adminLogin,
+                    icon: const Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.deepPurple,
+                    ),
+                    label: const Text(
+                      'Войти как админ  ·  пароль: 1234',
+                      style: TextStyle(color: Colors.deepPurple),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Icon(Icons.local_hospital,
                     size: 72, color: Colors.blue),
                 const SizedBox(height: 16),

@@ -60,6 +60,7 @@ class _CompleteDoctorProfileScreenState
         rating: 0.0,
         price: price,
         ownerUid: uid,
+        moderationStatus: 'pending',
       );
       final createdDoctor = await _api.createDoctor(newDoctor);
 
@@ -71,7 +72,9 @@ class _CompleteDoctorProfileScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Профиль врача создан'),
+            content: Text(
+              'Профиль создан и отправлен на модерацию',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -131,12 +134,32 @@ class _CompleteDoctorProfileScreenState
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Эти данные увидят пациенты при выборе врача',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Colors.orange.shade800,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'После сохранения профиль пройдёт проверку '
+                          'администратором перед публикацией.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _nameCtrl,
                   textCapitalization: TextCapitalization.words,
@@ -230,7 +253,7 @@ class _CompleteDoctorProfileScreenState
                           ),
                         )
                       : const Text(
-                          'Сохранить и продолжить',
+                          'Отправить на модерацию',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,

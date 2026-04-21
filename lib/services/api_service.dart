@@ -14,6 +14,28 @@ class ApiService {
   final Dio _dio = Dio();
 
   Future<List<Doctor>> getDoctors() async {
+    final all = await getAllDoctors();
+    final profiles = await getAllUserProfiles();
+    final blockedUids = <String>{
+      for (final p in profiles)
+        if (p.isBlocked) p.userId,
+    };
+    final blockedDoctorIds = <String>{
+      for (final p in profiles)
+        if (p.isBlocked && p.doctorId.isNotEmpty) p.doctorId,
+    };
+
+    List<Doctor> result = [];
+    for (final d in all) {
+      if (!d.isApproved) continue;
+      if (blockedUids.contains(d.ownerUid)) continue;
+      if (blockedDoctorIds.contains(d.id)) continue;
+      result.add(d);
+    }
+    return result;
+  }
+
+  Future<List<Doctor>> getAllDoctors() async {
     final res = await _dio.get(projectUrl);
     final List raw = res.data as List;
     List<Doctor> result = [];
@@ -43,6 +65,10 @@ class ApiService {
   Future<Doctor> updateDoctor(String id, Map<String, dynamic> data) async {
     final res = await _dio.put('$projectUrl/$id', data: data);
     return Doctor.fromJson(Map<String, dynamic>.from(res.data));
+  }
+
+  Future<void> deleteDoctor(String id) async {
+    await _dio.delete('$projectUrl/$id');
   }
 
   Future<List<Slot>> getSlots(String doctorId) async {
@@ -94,6 +120,18 @@ class ApiService {
       if (j is Map &&
           j['slotId'] != null &&
           j['doctorId']?.toString() == doctorId) {
+        result.add(Appointment.fromJson(Map<String, dynamic>.from(j)));
+      }
+    }
+    return result;
+  }
+
+  Future<List<Appointment>> getAllAppointments() async {
+    final res = await _dio.get(imageUrl);
+    final List raw = res.data as List;
+    List<Appointment> result = [];
+    for (var j in raw) {
+      if (j is Map && j['slotId'] != null) {
         result.add(Appointment.fromJson(Map<String, dynamic>.from(j)));
       }
     }
@@ -155,6 +193,18 @@ class ApiService {
     return null;
   }
 
+  Future<List<UserProfile>> getAllUserProfiles() async {
+    final res = await _dio.get(projectUrl);
+    final List raw = res.data as List;
+    List<UserProfile> result = [];
+    for (var j in raw) {
+      if (j is Map && j['type'] == 'user') {
+        result.add(UserProfile.fromJson(Map<String, dynamic>.from(j)));
+      }
+    }
+    return result;
+  }
+
   Future<UserProfile> createUserProfile(UserProfile profile) async {
     final res = await _dio.post(projectUrl, data: profile.toJson());
     return UserProfile.fromJson(Map<String, dynamic>.from(res.data));
@@ -166,9 +216,6 @@ class ApiService {
     return UserProfile.fromJson(Map<String, dynamic>.from(res.data));
   }
 
-  /// Начисляет сумму на баланс врача (находит UserProfile врача по doctorId).
-  /// Возвращает true, если операция успешна. Не кидает исключение —
-  /// чтобы не ломать основной flow записи/отмены.
   Future<bool> creditDoctorBalance(String doctorId, int amount) async {
     if (doctorId.isEmpty || amount <= 0) return false;
     try {
@@ -185,8 +232,6 @@ class ApiService {
     }
   }
 
-  /// Списывает сумму с баланса врача (при отмене врачом — возврат пациенту).
-  /// Если на балансе недостаточно — списывает до 0, но не уходит в минус.
   Future<bool> debitDoctorBalance(String doctorId, int amount) async {
     if (doctorId.isEmpty || amount <= 0) return false;
     try {

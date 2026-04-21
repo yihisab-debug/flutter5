@@ -6,16 +6,22 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'providers/admin_provider.dart';
 import 'providers/doctor_provider.dart';
 import 'providers/appointment_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/slot_provider.dart';
+import 'screens/admin/admin_home_screen.dart';
+import 'screens/auth/blocked_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/complete_profile_screen.dart';
 import 'screens/auth/pending_role.dart';
 import 'screens/doctors/doctor_list_screen.dart';
 import 'screens/doctor/complete_doctor_profile_screen.dart';
 import 'screens/doctor/doctor_home_screen.dart';
+import 'screens/doctor/doctor_pending_screen.dart';
+import 'services/admin_session.dart';
+import 'services/api_service.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -38,6 +44,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SlotProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
+        ChangeNotifierProvider<AdminSession>.value(
+          value: AdminSession.instance,
+        ),
       ],
       child: MaterialApp(
         title: 'Online Doctor Booking',
@@ -46,9 +56,22 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        home: const AuthGate(),
+        home: const RootRouter(),
       ),
     );
+  }
+}
+
+class RootRouter extends StatelessWidget {
+  const RootRouter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final admin = context.watch<AdminSession>();
+    if (admin.loggedIn) {
+      return const AdminHomeScreen();
+    }
+    return const AuthGate();
   }
 }
 
@@ -143,7 +166,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
-class ProfileRouter extends StatelessWidget {
+class ProfileRouter extends StatefulWidget {
   final User user;
   final VoidCallback onRetry;
 
@@ -152,6 +175,32 @@ class ProfileRouter extends StatelessWidget {
     required this.user,
     required this.onRetry,
   });
+
+  @override
+  State<ProfileRouter> createState() => _ProfileRouterState();
+}
+
+class _ProfileRouterState extends State<ProfileRouter> {
+  final _api = ApiService();
+
+  String? _cachedDoctorId;
+  String? _cachedStatus;
+  bool _loadingStatus = false;
+
+  Future<void> _refreshDoctorStatus(String doctorId) async {
+    if (_loadingStatus) return;
+    if (_cachedDoctorId == doctorId && _cachedStatus != null) return;
+    _loadingStatus = true;
+    try {
+      final d = await _api.getDoctorById(doctorId);
+      if (!mounted) return;
+      setState(() {
+        _cachedDoctorId = doctorId;
+        _cachedStatus = d?.moderationStatus ?? 'pending';
+      });
+    } catch (_) {}
+    _loadingStatus = false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +229,7 @@ class ProfileRouter extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: onRetry,
+                  onPressed: widget.onRetry,
                   child: const Text('Повторить'),
                 ),
                 const SizedBox(height: 8),
@@ -203,9 +252,23 @@ class ProfileRouter extends StatelessWidget {
 
     final profile = prov.profile!;
 
+    if (profile.isBlocked) {
+      return const BlockedScreen();
+    }
+
     if (profile.isDoctor) {
       if (profile.doctorId.isEmpty || profile.name.trim().isEmpty) {
         return const CompleteDoctorProfileScreen();
+      }
+
+      _refreshDoctorStatus(profile.doctorId);
+      if (_cachedStatus == null) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (_cachedStatus != 'approved') {
+        return const DoctorPendingScreen();
       }
       return const DoctorHomeScreen();
     }

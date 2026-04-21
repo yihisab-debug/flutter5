@@ -43,7 +43,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
     try {
       final d = await _api.getDoctorById(doctorId);
-      // Обновляем баланс — мог измениться из-за новых записей.
       await userProv.reload();
       if (!mounted) return;
       setState(() {
@@ -175,7 +174,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          // Карточка баланса врача
           Card(
             color: Colors.green.shade50,
             child: Padding(
